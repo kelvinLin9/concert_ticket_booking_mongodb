@@ -1,42 +1,92 @@
-import createError from 'http-errors';
-import express from "express";
-import path from 'path';
+import express from 'express';
 import cookieParser from 'cookie-parser';
-import logger from 'morgan';
+import morgan from 'morgan';
 
-import indexRouter from './routes/index';   
-import usersRouter from './routes/users';
+// 另外裝的
+import dotenv from 'dotenv';
+dotenv.config();
+import helmet from 'helmet';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import swaggerUi from 'swagger-ui-express';
+import { specs } from './swagger';
+
+// 引入路由
+import authRouter from './routes/auth';
+import userRouter from './routes/users';
+import verifyRouter from './routes/verify';
+
+
 
 const app = express();
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
 
-app.use(logger('dev'));
+// 未捕獲的異常處理
+process.on('uncaughtException', (err) => {
+  console.error('未捕獲的異常:', err);
+  process.exit(1);
+});
+
+// 未處理的 Promise 拒絕處理
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('未處理的 Promise 拒絕:', promise, '原因:', reason);
+});
+
+// 資料庫連接
+mongoose.connect(`mongodb+srv://kelvin80121:${process.env.DB_CONNECTION_STRING}@cluster0.0asbuyk.mongodb.net/Cluster0`)
+  .then(() => console.log("資料庫連接成功"))
+  .catch(err => console.log("資料庫連接失敗:", err));
+
+// 中間件設置
+app.use(helmet());
+app.use(cors());
+app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+// 路由設置
+app.use('/auth', authRouter);
+app.use('/users', userRouter);
+app.use('/verify', verifyRouter);
+
+// 錯誤處理中間件
+app.use((err: Error & { status?: number }, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.log('process.env.NODE_ENV', process.env.NODE_ENV)
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const statusCode = err.status || 500;
+
+  if (isDevelopment) {
+    res.status(statusCode).json({
+      success: false,
+      error: {
+        message: err.message,
+        stack: err.stack
+      }
+    });
+  } else {
+    res.status(statusCode).json({
+      success: false,
+      message: '系統發生錯誤'
+    });
+  }
 });
 
-// error handler
-app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get("env") === "development" ? err : {};
+// 404 處理中間件
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: '找不到該資源'
+  });
+});
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render("error");
-} as express.ErrorRequestHandler);
 
+
+// view engine setup 之後研究
+// app.set('views', path.join(__dirname, 'views'));
+// app.set('view engine', 'jade');
 
 export default app;
