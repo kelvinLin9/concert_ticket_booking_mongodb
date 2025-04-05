@@ -21,26 +21,35 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'https://music-tutor-backend.onrender.com/api/auth/google/callback',
+  callbackURL: 'http://localhost:3000/api/v1/auth/google/callback',
   passReqToCallback: true
 },
   async function (req, accessToken, refreshToken, profile, done) {
-    console.log("測試 profile", profile)
+    console.log("=== Google OAuth Flow Start ===");
+    console.log("Profile ID:", profile.id);
+    console.log("Profile Email:", profile.emails?.[0]?.value);
+    console.log("Profile Name:", profile.displayName);
+
     try {
       // 先尋找是否有使用 Google 登入的用戶
+      console.log("Searching for existing Google OAuth user...");
       let user = await UsersModel.findOne({
         'oauthProviders.provider': 'google',
         'oauthProviders.providerId': profile.id
       });
 
       if (!user) {
+        console.log("No existing Google OAuth user found");
         // 如果沒有找到，則尋找是否有相同 email 的用戶
         if (!profile.emails || !profile.emails[0]) {
+          console.log("Error: No email found in profile");
           return done(new Error('No email found in profile'));
         }
+        console.log("Searching for user with matching email...");
         user = await UsersModel.findOne({ email: profile.emails[0].value });
 
         if (user) {
+          console.log("Found user with matching email, adding Google OAuth info");
           // 如果找到相同 email 的用戶，添加 Google OAuth 資訊
           user.oauthProviders.push({
             provider: 'google',
@@ -51,27 +60,34 @@ passport.use(new GoogleStrategy({
           });
           await user.save();
         } else {
+          console.log("No existing user found, creating new user");
           // 如果都沒有找到，創建新用戶
           if (!profile.photos || !profile.photos[0]) {
+            console.log("Error: No photo found in profile");
             return done(new Error('No photo found in profile'));
           }
-          user = await UsersModel.create({
-            name: profile.displayName,
-            email: profile.emails[0].value,
-            photo: profile.photos[0].value,
-            role: 'user'
-          });
 
-          user.oauthProviders.push({
+          // 先創建 OAuth provider 資訊
+          const oauthProvider = {
             provider: 'google',
             providerId: profile.id,
             accessToken,
             refreshToken,
             tokenExpiresAt: new Date(Date.now() + 3600000) // 1小時後過期
+          };
+
+          // 創建新用戶時包含 OAuth provider
+          user = await UsersModel.create({
+            name: profile.displayName,
+            email: profile.emails[0].value,
+            photo: profile.photos[0].value,
+            role: 'user',
+            oauthProviders: [oauthProvider]
           });
-          await user.save();
+          console.log("New user created successfully");
         }
       } else {
+        console.log("Found existing Google OAuth user, updating OAuth info");
         // 如果找到用戶，更新 OAuth 資訊
         user.oauthProviders.push({
           provider: 'google',
@@ -83,11 +99,14 @@ passport.use(new GoogleStrategy({
         await user.save();
       }
 
-      console.log('user', user);
-      const frontendCallback = req.query.state;
-      console.log('frontendCallback', frontendCallback)
-      return done(null, { user, frontendCallback });
+      console.log('=== OAuth Flow Success ===');
+      console.log('User ID:', user._id);
+      console.log('User Email:', user.email);
+      console.log('Frontend Callback:', req.query.state);
+      return done(null, { user, frontendCallback: req.query.state });
     } catch (err) {
+      console.log('=== OAuth Flow Error ===');
+      console.log('Error details:', err);
       return done(err);
     }
   }));
@@ -111,6 +130,7 @@ router.get('/check', isAuth, check);
 // Google 登入路由
 router.get('/google', (req, res, next) => {
   const callback = String(req.query.callback || '');
+  console.log('=== Google OAuth Initiation ===');
   console.log('Callback URL:', callback);
   passport.authenticate('google', {
     scope: ['email', 'profile'],
@@ -120,16 +140,23 @@ router.get('/google', (req, res, next) => {
 
 // Google 回調路由
 router.get('/google/callback',
+  (req, res, next) => {
+    console.log('=== Google OAuth Callback Received ===');
+    console.log('Query parameters:', req.query);
+    next();
+  },
   passport.authenticate('google', { session: false }),
   googleLogin
 );
 
 // Google 客戶端回調路由
 router.post('/googleClient/callback', (req, res, next) => {
+  console.log('=== Google Client OAuth Callback Received ===');
   // 從請求體獲取授權碼
   const { code } = req.body;
-  console.log('code', code);
+  console.log('Auth code received:', code ? 'Yes' : 'No');
   if (!code) {
+    console.log('Error: Missing auth code');
     res.status(400).json({
       success: false,
       error: { message: 'Missing auth code' }

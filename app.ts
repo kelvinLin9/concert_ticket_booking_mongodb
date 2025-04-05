@@ -49,9 +49,9 @@ app.use(cookieParser());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // 路由設置
-app.use('/auth', authRouter);
-app.use('/users', userRouter);
-app.use('/verify', verifyRouter);
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/users', userRouter);
+app.use('/api/v1/verify', verifyRouter);
 
 // 錯誤處理中間件
 app.use((err: Error & { status?: number }, req: express.Request, res: express.Response, next: express.NextFunction) => {
