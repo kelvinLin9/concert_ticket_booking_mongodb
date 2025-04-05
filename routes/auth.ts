@@ -13,6 +13,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import UsersModel from '../models/user';
 import { handleErrorAsync } from '../statusHandle/handleErrorAsync';
+import { register } from '../controller/auth.controller';
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Missing Google OAuth credentials');
@@ -115,11 +116,11 @@ const router = Router();
 
 router.use(checkRequestBodyValidator);
 
-// 登入
-router.post('/login', handleErrorAsync(login));
+// 一般註冊
+router.post('/register', handleErrorAsync(register));
 
-// 註冊
-router.post('/signup', handleErrorAsync(signup));
+// 一般登入
+router.post('/login', handleErrorAsync(login));
 
 // 忘記密碼
 router.post('/forgot', forget);
@@ -127,16 +128,8 @@ router.post('/forgot', forget);
 // 檢查是否登入
 router.get('/check', isAuth, check);
 
-// Google 登入路由
-router.get('/google', (req, res, next) => {
-  const callback = String(req.query.callback || '');
-  console.log('=== Google OAuth Initiation ===');
-  console.log('Callback URL:', callback);
-  passport.authenticate('google', {
-    scope: ['email', 'profile'],
-    state: callback
-  })(req, res, next);
-});
+// Google 登入
+router.get('/google', handleErrorAsync(googleLogin));
 
 // Google 回調路由
 router.get('/google/callback',
