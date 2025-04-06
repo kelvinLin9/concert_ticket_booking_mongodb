@@ -22,8 +22,8 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: 'http://localhost:3000/api/v1/auth/google/callback',
-  passReqToCallback: true
+  callbackURL: process.env.GOOGLE_CALLBACK_URL,
+  passReqToCallback: true,
 },
   async function (req, accessToken, refreshToken, profile, done) {
     console.log("=== Google OAuth Flow Start ===");
@@ -129,7 +129,20 @@ router.post('/forgot', forget);
 router.get('/check', isAuth, check);
 
 // Google 登入
-router.get('/google', handleErrorAsync(googleLogin));
+router.get('/google', passport.authenticate('google', { 
+  scope: ['profile', 'email'],
+  prompt: 'select_account'
+}));
+
+// router.get('/google', (req, res, next) => {
+//   const { callback } = req.query;
+//   console.log('Callback URL:', callback);
+//   passport.authenticate('google', {
+//     scope: ['email', 'profile'],
+//     state: callback // 使用 state 參數傳遞 callback URL
+//   })(req, res, next);
+// });
+
 
 // Google 回調路由
 router.get('/google/callback',
