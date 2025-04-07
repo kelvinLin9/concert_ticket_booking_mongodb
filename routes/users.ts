@@ -16,20 +16,6 @@ import createHttpError from 'http-errors';
 
 const router = express.Router();
 
-// 取得使用者資訊
-router.get('/profile', isAuth, handleErrorAsync(getUser));
-
-// 更新使用者資訊
-router.put('/profile', isAuth, checkRequestBodyValidator, handleErrorAsync(updateInfo));
-
-// 更新角色
-router.put('/update-role', isAuth, updateRole);
-
-// 管理員功能
-router.get('/', isAuth, getUsers);
-router.put('/:id', isAuth, adminUpdateUserInfo);
-router.delete('/:id', isAuth, adminDeleteUser);
-
 // 取得當前用戶資料
 router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Response) => {
   const customReq = req as CustomRequest;
@@ -38,8 +24,7 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
   }
 
   const user = await UsersModel.findById(customReq.user.userId)
-    .select('-password -verificationToken')
-    .populate('courses');
+    .select('-password -verificationToken');
 
   if (!user) {
     return res.status(404).json({
@@ -63,8 +48,7 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
     intro: user.intro,
     facebook: user.facebook,
     instagram: user.instagram,
-    discord: user.discord,
-    courses: user.courses
+    discord: user.discord
   };
 
   res.json({
@@ -72,5 +56,16 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
     user: userData
   });
 }));
+
+// 更新使用者資訊
+router.put('/profile', isAuth, checkRequestBodyValidator, handleErrorAsync(updateInfo));
+
+// 更新角色
+router.put('/update-role', isAuth, updateRole);
+
+// 管理員功能
+router.get('/', isAuth, getUsers);
+router.put('/:id', isAuth, adminUpdateUserInfo);
+router.delete('/:id', isAuth, adminDeleteUser);
 
 export default router;

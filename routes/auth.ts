@@ -41,15 +41,22 @@ passport.use(new GoogleStrategy({
         user = await UsersModel.findOne({ email: profile.emails[0].value });
 
         if (user) {
-          // 如果找到相同 email 的用戶，添加 Google OAuth 資訊
-          user.oauthProviders.push({
-            provider: 'google',
-            providerId: profile.id,
-            accessToken,
-            refreshToken,
-            tokenExpiresAt: new Date(Date.now() + 3600000) // 1小時後過期
-          });
-          await user.save();
+          // 檢查是否已經有相同的 providerId
+          const existingProvider = user.oauthProviders.find(
+            provider => provider.provider === 'google' && provider.providerId === profile.id
+          );
+
+          // 只有在沒有相同的 providerId 時才添加新的
+          if (!existingProvider) {
+            user.oauthProviders.push({
+              provider: 'google',
+              providerId: profile.id,
+              accessToken,
+              refreshToken,
+              tokenExpiresAt: new Date(Date.now() + 3600000) // 1小時後過期
+            });
+            await user.save();
+          }
         } else {
           // 如果都沒有找到，創建新用戶
           if (!profile.photos || !profile.photos[0]) {
@@ -75,15 +82,22 @@ passport.use(new GoogleStrategy({
           });
         }
       } else {
-        // 如果找到用戶，更新 OAuth 資訊
-        user.oauthProviders.push({
-          provider: 'google',
-          providerId: profile.id,
-          accessToken,
-          refreshToken,
-          tokenExpiresAt: new Date(Date.now() + 3600000) // 1小時後過期
-        });
-        await user.save();
+        // 如果找到用戶，檢查是否已經有相同的 providerId
+        const existingProvider = user.oauthProviders.find(
+          provider => provider.provider === 'google' && provider.providerId === profile.id
+        );
+
+        // 只有在沒有相同的 providerId 時才添加新的
+        if (!existingProvider) {
+          user.oauthProviders.push({
+            provider: 'google',
+            providerId: profile.id,
+            accessToken,
+            refreshToken,
+            tokenExpiresAt: new Date(Date.now() + 3600000) // 1小時後過期
+          });
+          await user.save();
+        }
       }
       
       // 準備完整的用戶資料
