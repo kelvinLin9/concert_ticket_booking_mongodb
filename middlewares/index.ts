@@ -3,7 +3,7 @@ import validator from 'validator';
 import { verifyToken } from '../utils/index';
 import { Request, Response, NextFunction } from 'express';
 
-interface CustomRequest extends Request {
+export interface CustomRequest extends Request {
   user?: {
     userId: string;
     role: string;

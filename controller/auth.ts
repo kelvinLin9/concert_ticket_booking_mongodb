@@ -11,15 +11,21 @@ interface GoogleRequest extends Request {
       email: string;
       photo?: string;
       role: string;
+      oauthProviders: string[];
+      phone: string;
+      address: string;
+      birthday: string;
+      gender: string;
+      intro: string;
+      facebook: string;
+      instagram: string;
+      discord: string;
     }
   }
 }
 
 const googleLogin = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
   const googleReq = req as GoogleRequest;
-  console.log("googleLogin");
-  console.log('用戶資料:', googleReq.user);
-  console.log('重定向目標:', googleReq.query.state || '未指定');
 
   // 檢查必要的用戶數據
   if (!googleReq.user || !googleReq.user.user || !googleReq.user.user._id) {
@@ -41,14 +47,22 @@ const googleLogin = handleErrorAsync(async (req: Request, res: Response, next: N
     name: googleReq.user.user.name,
     email: googleReq.user.user.email,
     photo: googleReq.user.user.photo,
-    role: googleReq.user.user.role
+    role: googleReq.user.user.role,
+    oauthProviders: googleReq.user.user.oauthProviders,
+    phone: googleReq.user.user.phone,
+    address: googleReq.user.user.address,
+    birthday: googleReq.user.user.birthday,
+    gender: googleReq.user.user.gender,
+    intro: googleReq.user.user.intro,
+    facebook: googleReq.user.user.facebook,
+    instagram: googleReq.user.user.instagram,
+    discord: googleReq.user.user.discord
   };
 
   // 如果是 POST 請求 (直接從前端發來的)
   if (req.method === 'POST') {
     return res.json({
       success: true,
-      user: userData,
       token: token
     });
   }
