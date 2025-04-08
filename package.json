@@ -2,10 +2,10 @@
   "name": "concert-ticket-booking-mongodb",
   "version": "1.0.0",
   "description": "Concert ticket booking system with MongoDB",
-  "main": "dist/app.js",
+  "main": "dist/bin/server.js",
   "scripts": {
-    "start": "node dist/app.js",
-    "dev": "nodemon app.ts",
+    "start": "node dist/bin/server.js",
+    "dev": "nodemon bin/server.ts",
     "build": "tsc",
     "postinstall": "npm run build",
     "test": "jest"
