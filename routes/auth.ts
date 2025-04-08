@@ -13,7 +13,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 import UsersModel from '../models/user';
 import { handleErrorAsync } from '../statusHandle/handleErrorAsync';
-import { register } from '../controller/auth.controller';
+import { 
+  register, 
+  verifyEmail, 
+  resendVerification, 
+  requestPasswordReset, 
+  resetPassword 
+} from '../controller/auth.controller';
+import { Request, Response } from 'express';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
   throw new Error('Missing Google OAuth credentials');
@@ -74,10 +82,8 @@ passport.use(new GoogleStrategy({
 
           // 創建新用戶時包含 OAuth provider
           user = await UsersModel.create({
-            name: profile.displayName,
             email: profile.emails[0].value,
-            photo: profile.photos[0].value,
-            role: 'user',
+            avatar: profile.photos[0].value,
             oauthProviders: [oauthProvider]
           });
         }
@@ -104,19 +110,16 @@ passport.use(new GoogleStrategy({
       const userData = {
         user: {
           _id: user._id,
-          name: user.name,
           email: user.email,
-          photo: user.photo,
-          role: user.role,
+          avatar: user.avatar,
           oauthProviders: user.oauthProviders,
           phone: user.phone,
           address: user.address,
           birthday: user.birthday,
           gender: user.gender,
-          intro: user.intro,
-          facebook: user.facebook,
-          instagram: user.instagram,
-          discord: user.discord
+          preferredRegions: user.preferredRegions,
+          preferredEventTypes: user.preferredEventTypes,
+          country: user.country
         }
       };
       
@@ -136,7 +139,19 @@ router.post('/register', handleErrorAsync(register));
 // 一般登入
 router.post('/login', handleErrorAsync(login));
 
-// 忘記密碼
+// 電子郵件驗證
+router.post('/verify-email', handleErrorAsync(verifyEmail));
+
+// 重新發送驗證碼
+router.post('/resend-verification', handleErrorAsync(resendVerification));
+
+// 請求密碼重置
+router.post('/request-password-reset', handleErrorAsync(requestPasswordReset));
+
+// 重置密碼
+router.post('/reset-password', handleErrorAsync(resetPassword));
+
+// 忘記密碼（舊版，保留向後兼容）
 router.post('/forgot', forget);
 
 // 檢查是否登入
@@ -173,5 +188,40 @@ router.post('/googleClient/callback', (req, res, next) => {
   req.query = { ...req.query, code };
   next();
 }, passport.authenticate('google', { session: false }), googleLogin);
+
+// 測試郵件發送
+router.post('/test-email', handleErrorAsync(async (req: Request, res: Response) => {
+  const { email, type } = req.body;
+
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      message: '請提供電子郵件地址'
+    });
+  }
+
+  try {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    if (type === 'reset') {
+      await sendPasswordResetEmail(email, code);
+    } else {
+      await sendVerificationEmail(email, code);
+    }
+
+    res.json({
+      success: true,
+      message: '測試郵件發送成功',
+      code // 在測試環境中返回驗證碼
+    });
+  } catch (error) {
+    console.error('測試郵件發送失敗:', error);
+    res.status(500).json({
+      success: false,
+      message: '郵件發送失敗',
+      error: error instanceof Error ? error.message : '未知錯誤'
+    });
+  }
+}));
 
 export default router; 

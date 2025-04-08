@@ -42,9 +42,22 @@ export const verifyToken = (token: string): EmailTokenPayload | AuthTokenPayload
     throw new Error("JWT_SECRET environment variable is not set.");
   }
   try {
-    return jsonWebToken.verify(token, process.env.JWT_SECRET) as EmailTokenPayload | AuthTokenPayload;
+    const decoded = jsonWebToken.verify(token, process.env.JWT_SECRET) as EmailTokenPayload | AuthTokenPayload;
+    
+    // 檢查是否為驗證碼 token
+    if ('code' in decoded) {
+      // 檢查是否過期
+      if (decoded.exp * 1000 < Date.now()) {
+        throw createHttpError(400, '驗證碼已過期');
+      }
+    }
+    
+    return decoded;
   } catch (error) {
-    throw createHttpError(403, '請重新登入');
+    if (error instanceof createHttpError.HttpError) {
+      throw error;
+    }
+    throw createHttpError(400, '無效的驗證碼');
   }
 };
 
@@ -54,18 +67,16 @@ export const generateEmailToken = () => {
     throw new Error("JWT_SECRET environment variable is not set.");
   }
   const token = jsonWebToken.sign({ code }, process.env.JWT_SECRET, {
-    expiresIn: 3600 // 1 hour
+    expiresIn: 900 // 15 minutes
   });
 
   return { code, token };
 };
 
 const generateRandomCode = () => {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let code = '';
   for (let i = 0; i < 6; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    code += characters.charAt(randomIndex);
+    code += Math.floor(Math.random() * 10).toString();
   }
   return code;
 };

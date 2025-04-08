@@ -1,15 +1,16 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import User from '../models/user';
-import { generateToken } from '../utils';
+import { generateToken, verifyToken } from '../utils';
 import { handleErrorAsync } from '../statusHandle/handleErrorAsync';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 
 // 註冊新用戶
 export const register = handleErrorAsync(async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+  const { email, password } = req.body;
 
   // 檢查必要欄位
-  if (!name || !email || !password) {
+  if (!email || !password) {
     return res.status(400).json({
       success: false,
       message: '請提供所有必要欄位'
@@ -17,7 +18,7 @@ export const register = handleErrorAsync(async (req: Request, res: Response) => 
   }
 
   // 檢查郵箱格式
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (!/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/.test(email)) {
     return res.status(400).json({
       success: false,
       message: '請提供有效的電子郵件地址'
@@ -41,20 +42,25 @@ export const register = handleErrorAsync(async (req: Request, res: Response) => 
     });
   }
 
-  // 加密密碼
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
   // 創建新用戶
   const newUser = await User.create({
-    name,
     email,
-    password: hashedPassword,
-    role: 'user', // 默認角色
+    password,  // 密碼會在 User model 的 pre-save hook 中自動加密
+    role: 'user',
+    isEmailVerified: false,
     oauthProviders: []
   });
 
-  // 生成 token
+  // 生成驗證碼和 token
+  const { code } = await newUser.createVerificationToken();
+  
+  // 打印驗證碼
+  console.log('驗證碼:', code);
+
+  // 發送驗證碼郵件
+  await sendVerificationEmail(newUser.email, code);
+
+  // 生成 JWT token
   const token = generateToken({
     userId: newUser._id.toString(),
     role: newUser.role
@@ -62,11 +68,12 @@ export const register = handleErrorAsync(async (req: Request, res: Response) => 
 
   res.status(201).json({
     success: true,
+    message: '註冊成功，請查收驗證碼郵件',
     user: {
       _id: newUser._id,
-      name: newUser.name,
       email: newUser.email,
-      role: newUser.role
+      role: newUser.role,
+      isEmailVerified: newUser.isEmailVerified
     },
     token
   });
@@ -112,11 +119,180 @@ export const login = handleErrorAsync(async (req: Request, res: Response) => {
     success: true,
     user: {
       _id: user._id,
-      name: user.name,
       email: user.email,
       role: user.role,
-      photo: user.photo
+      isEmailVerified: user.isEmailVerified
     },
     token
+  });
+});
+
+// 驗證電子郵件
+export const verifyEmail = handleErrorAsync(async (req: Request, res: Response) => {
+  const { email, code } = req.body;
+
+  const user = await User.findOne({ email }).select('+verificationToken +verificationTokenExpires');
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: '找不到此用戶'
+    });
+  }
+
+  if (!user.verificationToken || !user.verificationTokenExpires) {
+    return res.status(400).json({
+      success: false,
+      message: '無效的驗證請求'
+    });
+  }
+
+  if (user.verificationTokenExpires < new Date()) {
+    return res.status(400).json({
+      success: false,
+      message: '驗證碼已過期'
+    });
+  }
+
+  // 使用 bcrypt 比較驗證碼
+  const isMatch = await bcrypt.compare(code, user.verificationToken);
+  if (!isMatch) {
+    return res.status(400).json({
+      success: false,
+      message: '驗證碼錯誤'
+    });
+  }
+
+  user.isEmailVerified = true;
+  user.verificationToken = undefined;
+  user.verificationTokenExpires = undefined;
+  await user.save();
+
+  res.json({
+    success: true,
+    message: '電子郵件驗證成功'
+  });
+});
+
+// 重新發送驗證碼
+export const resendVerification = handleErrorAsync(async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: '找不到此用戶'
+    });
+  }
+
+  if (user.isEmailVerified) {
+    return res.status(400).json({
+      success: false,
+      message: '此電子郵件已驗證'
+    });
+  }
+
+  // 檢查是否在冷卻時間內
+  if (user.lastVerificationAttempt && 
+      Date.now() - user.lastVerificationAttempt.getTime() < 60000) { // 1分鐘冷卻時間
+    return res.status(400).json({
+      success: false,
+      message: '請稍後再試'
+    });
+  }
+
+  const { code } = await user.createVerificationToken();
+  
+  // 打印驗證碼
+  console.log('重新發送的驗證碼:', code);
+  
+  user.lastVerificationAttempt = new Date();
+  await user.save();
+
+  // 發送驗證碼郵件
+  await sendVerificationEmail(user.email, code);
+
+  res.json({
+    success: true,
+    message: '驗證碼已重新發送'
+  });
+});
+
+// 請求密碼重置
+export const requestPasswordReset = handleErrorAsync(async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: '找不到此用戶'
+    });
+  }
+
+  // 檢查是否在冷卻時間內
+  if (user.lastVerificationAttempt && 
+      Date.now() - user.lastVerificationAttempt.getTime() < 60000) { // 1分鐘冷卻時間
+    return res.status(400).json({
+      success: false,
+      message: '請稍後再試'
+    });
+  }
+
+  const { code } = await user.createPasswordResetToken();
+  user.lastVerificationAttempt = new Date();
+  await user.save();
+
+  // 發送密碼重置郵件
+  await sendPasswordResetEmail(user.email, code);
+
+  res.json({
+    success: true,
+    message: '密碼重置郵件已發送'
+  });
+});
+
+// 重置密碼
+export const resetPassword = handleErrorAsync(async (req: Request, res: Response) => {
+  const { email, code, newPassword } = req.body;
+
+  const user = await User.findOne({ email }).select('+passwordResetToken +passwordResetExpires');
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: '找不到此用戶'
+    });
+  }
+
+  if (!user.passwordResetToken || !user.passwordResetExpires) {
+    return res.status(400).json({
+      success: false,
+      message: '無效的重置密碼請求'
+    });
+  }
+
+  if (user.passwordResetExpires < new Date()) {
+    return res.status(400).json({
+      success: false,
+      message: '重置密碼連結已過期'
+    });
+  }
+
+  const payload = verifyToken(user.passwordResetToken);
+  if (!('code' in payload) || payload.code !== code) {
+    return res.status(400).json({
+      success: false,
+      message: '驗證碼錯誤'
+    });
+  }
+
+  user.password = newPassword;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  await user.save();
+
+  res.json({
+    success: true,
+    message: '密碼重置成功'
   });
 }); 

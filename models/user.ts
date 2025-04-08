@@ -11,9 +11,9 @@ interface IOAuthProvider {
 
 export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
-  username: string;
-  password?: string;  // 改為可選，因為可能使用 OAuth 登入
-  email: string;
+  email: string;  // 主要識別符
+  password?: string;  // 可選，因為可能使用 OAuth 登入
+  role: string;  // 用戶角色
   phone?: string;
   birthday?: Date;
   gender?: string;
@@ -22,6 +22,12 @@ export interface IUser extends Document {
   country?: string;
   address?: string;
   avatar?: string;
+  verificationToken?: string;  // 驗證碼 token
+  verificationTokenExpires?: Date;  // 驗證碼過期時間
+  isEmailVerified: boolean;  // 郵件是否已驗證
+  passwordResetToken?: string;  // 重置密碼 token
+  passwordResetExpires?: Date;  // 重置密碼 token 過期時間
+  lastVerificationAttempt?: Date;  // 上次發送驗證碼的時間
   oauthProviders: IOAuthProvider[];
   hasOAuthProvider(provider: string): boolean;
   addOAuthProvider(
@@ -31,6 +37,8 @@ export interface IUser extends Document {
     refreshToken: string,
     tokenExpiresAt: Date
   ): void;
+  createVerificationToken(): Promise<{ token: string, code: string }>;
+  createPasswordResetToken(): Promise<{ token: string, code: string }>;
 }
 
 const oauthProviderSchema = new Schema({
@@ -58,21 +66,6 @@ const oauthProviderSchema = new Schema({
 }, { _id: false });
 
 const userSchema = new Schema<IUser>({
-  username: {
-    type: String,
-    required: [true, '帳號為必填欄位'],
-    unique: true,
-    trim: true,
-    minlength: [3, '帳號至少需要 3 個字元以上']
-  },
-  password: {
-    type: String,
-    minlength: [6, '密碼至少需要 6 個字元以上'],
-    select: false,
-    required: function(this: IUser) {
-      return !this.oauthProviders || this.oauthProviders.length === 0;
-    }
-  },
   email: {
     type: String,
     required: [true, 'Email 為必填欄位'],
@@ -85,6 +78,20 @@ const userSchema = new Schema<IUser>({
       },
       message: 'Email 格式不正確'
     }
+  },
+  password: {
+    type: String,
+    minlength: [6, '密碼至少需要 6 個字元以上'],
+    select: false,
+    required: function(this: IUser) {
+      return !this.oauthProviders || this.oauthProviders.length === 0;
+    }
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin', 'superuser'],
+    default: 'user',
+    required: true
   },
   phone: {
     type: String,
@@ -155,6 +162,30 @@ const userSchema = new Schema<IUser>({
       message: '頭像 URL 格式不正確'
     }
   },
+  verificationToken: {
+    type: String,
+    select: false
+  },
+  verificationTokenExpires: {
+    type: Date,
+    select: false
+  },
+  isEmailVerified: {
+    type: Boolean,
+    default: false
+  },
+  passwordResetToken: {
+    type: String,
+    select: false
+  },
+  passwordResetExpires: {
+    type: Date,
+    select: false
+  },
+  lastVerificationAttempt: {
+    type: Date,
+    select: false
+  },
   oauthProviders: [oauthProviderSchema]
 }, {
   versionKey: false,
@@ -196,6 +227,41 @@ userSchema.methods.addOAuthProvider = function(
       tokenExpiresAt
     });
   }
+};
+
+// 生成驗證碼和 token
+userSchema.methods.createVerificationToken = async function(): Promise<{ token: string, code: string }> {
+  // 生成 6 位數字驗證碼
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // 設置過期時間（15分鐘）
+  this.verificationTokenExpires = new Date(Date.now() + 15 * 60 * 1000);
+  
+  // 記錄發送時間
+  this.lastVerificationAttempt = new Date();
+  
+  // 使用 bcrypt 加密驗證碼
+  this.verificationToken = await bcrypt.hash(code, 1);
+  
+  await this.save();
+  
+  return { token: this.verificationToken, code };
+};
+
+// 生成重置密碼的驗證碼和 token
+userSchema.methods.createPasswordResetToken = async function(): Promise<{ token: string, code: string }> {
+  // 生成 6 位數字驗證碼
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // 設置過期時間（15分鐘）
+  this.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+  
+  // 使用 bcrypt 加密驗證碼
+  this.passwordResetToken = await bcrypt.hash(code, 1);
+  
+  await this.save();
+  
+  return { token: this.passwordResetToken, code };
 };
 
 const User = mongoose.model<IUser>('User', userSchema);

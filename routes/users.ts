@@ -36,19 +36,14 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
   // 準備完整的用戶資料
   const userData = {
     _id: user._id,
-    name: user.name,
     email: user.email,
-    photo: user.photo,
     role: user.role,
+    isEmailVerified: user.isEmailVerified,
     oauthProviders: user.oauthProviders,
     phone: user.phone,
     address: user.address,
     birthday: user.birthday,
-    gender: user.gender,
-    intro: user.intro,
-    facebook: user.facebook,
-    instagram: user.instagram,
-    discord: user.discord
+    gender: user.gender
   };
 
   res.json({

@@ -14,11 +14,8 @@ interface CustomRequest extends Request {
 }
 
 const signup = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const { email, password, confirmPassword, name, role = 'user' } = req.body;
+  const { email, password, confirmPassword, role = 'user' } = req.body;
 
-  if (!name) {
-    throw createHttpError(400, '姓名為必填欄位');
-  }
   if (password !== confirmPassword) {
     throw createHttpError(400, '兩次輸入的密碼不匹配');
   }
@@ -28,17 +25,26 @@ const signup = handleErrorAsync(async (req: Request, res: Response, next: NextFu
     throw createHttpError(400, '此 Email 已註冊');
   }
 
-  const hashedPassword = await bcrypt.hash(password, 6);
-
   const user = await UsersModel.create({
-    name,
     email,
-    password: hashedPassword,
-    role
+    password,
+    role,
+    isEmailVerified: false,
+    oauthProviders: []
   }) as IUser;
+
+  // 生成驗證碼和 token
+  const { code } = await user.createVerificationToken();
 
   res.send({
     status: true,
+    message: '註冊成功，請查收驗證碼郵件',
+    user: {
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified
+    },
     token: generateToken({ userId: user._id.toString(), role: user.role })
   });
 });
@@ -57,7 +63,12 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 
     res.send({
       status: true,
-      user: user,
+      user: {
+        _id: user._id,
+        email: user.email,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified
+      },
       token: generateToken({ userId: user._id.toString(), role: user.role })
     });
   } catch (error) {
@@ -67,27 +78,36 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 const forget = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, code, newPassword } = req.body;
-    const user = await UsersModel.findOne({ email }).select('+verificationToken');
+    const user = await UsersModel.findOne({ email }).select('+passwordResetToken +passwordResetExpires');
     if (!user) {
       throw createHttpError(404, '此使用者不存在');
     }
 
-    if (!user.verificationToken) {
-      throw createHttpError(400, '無效的驗證碼');
+    if (!user.passwordResetToken || !user.passwordResetExpires) {
+      throw createHttpError(400, '無效的重置密碼請求');
     }
 
-    const payload = verifyToken(user.verificationToken);
+    if (user.passwordResetExpires < new Date()) {
+      throw createHttpError(400, '重置密碼連結已過期');
+    }
+
+    const payload = verifyToken(user.passwordResetToken);
     if (!('code' in payload)) {
-      throw createHttpError(400, '無效的驗證碼格式');
+      throw createHttpError(400, '無效的重置密碼請求');
     }
     if (payload.code !== code) {
       throw createHttpError(400, '驗證碼錯誤');
     }
 
-    user.password = await bcrypt.hash(newPassword, 6);
+    user.password = newPassword;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
     await user.save();
 
-    res.send({ status: true });
+    res.send({ 
+      status: true,
+      message: '密碼重置成功'
+    });
   } catch (error) {
     next(error);
   }
@@ -147,45 +167,66 @@ const getUser = async (req: Request, res: Response, next: NextFunction) => {
   }
 };
 const updateInfo = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const { _id, name, email, role, phone, address, birthday, gender, photo, intro, facebook, instagram, discord } = req.body;
-
-  if (name && !validator.isLength(name, { min: 2 })) {
-    throw createHttpError(400, 'name 至少需要 2 個字元以上');
+  const customReq = req as CustomRequest;
+  if (!customReq.user) {
+    throw createHttpError(401, '請先登入');
   }
 
-  if (photo && !validator.isURL(photo, {
-    protocols: ['http', 'https'],
-    require_protocol: true
-  })) {
-    throw createHttpError(400, '大頭照的 URL 格式不正確');
+  const { phone, birthday, gender, preferredRegions, preferredEventTypes, country, address } = req.body;
+
+  // 驗證手機號碼格式
+  if (phone && !/^[0-9]{10}$/.test(phone)) {
+    throw createHttpError(400, '手機號碼格式不正確');
   }
 
+  // 驗證生日格式
+  if (birthday && !validator.isDate(birthday)) {
+    throw createHttpError(400, '生日格式不正確');
+  }
 
-  const updatedUser = await UsersModel.findByIdAndUpdate(_id, {
-    name,
-    email,
-    role,
-    phone,
-    address,
-    birthday,
-    gender,
-    photo,
-    intro,
-    facebook,
-    instagram,
-    discord
-  }, { new: true, runValidators: true });
+  // 驗證性別
+  if (gender && !['male', 'female', 'other'].includes(gender)) {
+    throw createHttpError(400, '性別格式不正確');
+  }
+
+  // 驗證偏好區域
+  if (preferredRegions) {
+    const validRegions = ['north', 'south', 'east', 'central', 'offshore', 'overseas'];
+    if (!Array.isArray(preferredRegions) || !preferredRegions.every(region => validRegions.includes(region))) {
+      throw createHttpError(400, '偏好活動區域選項不正確');
+    }
+  }
+
+  // 驗證偏好活動類型
+  if (preferredEventTypes) {
+    const validTypes = ['pop', 'rock', 'electronic', 'hip-hop', 'jazz-blues', 'classical', 'other'];
+    if (!Array.isArray(preferredEventTypes) || !preferredEventTypes.every(type => validTypes.includes(type))) {
+      throw createHttpError(400, '偏好活動類型選項不正確');
+    }
+  }
+
+  const updatedUser = await UsersModel.findByIdAndUpdate(
+    customReq.user.userId,
+    {
+      phone,
+      birthday,
+      gender,
+      preferredRegions,
+      preferredEventTypes,
+      country,
+      address
+    },
+    { new: true, runValidators: true }
+  ).select('-password -verificationToken');
 
   if (!updatedUser) {
-    return res.status(404).send({
-      status: false,
-      message: '找不到用戶'
-    });
+    throw createHttpError(404, '找不到用戶資料');
   }
 
-  res.send({
-    status: true,
-    result: updatedUser
+  res.json({
+    success: true,
+    message: '個人資料已更新',
+    user: updatedUser
   });
 });
 

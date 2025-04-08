@@ -1,13 +1,12 @@
 {
-  "name": "ts",
-  "version": "0.0.0",
+  "name": "concert-ticket-booking",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "nodemon ./dist/bin/server.js",
-    "start:dev": "nodemon bin/server.ts",
-    "copy-static": "ts-node copyStatic.ts",
-    "ts-build": "tsc",
-    "build": "npm run ts-build && npm run copy-static"
+    "start": "node ./dist/bin/server.js",
+    "dev": "nodemon bin/server.ts",
+    "build": "tsc",
+    "postinstall": "npm run build"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.3.0",
@@ -48,8 +47,12 @@
     "@types/shelljs": "^0.8.15",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/validator": "^13.12.3",
+    "nodemon": "^3.0.3",
     "shelljs": "^0.9.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
