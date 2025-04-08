@@ -38,7 +38,7 @@ const googleLogin = handleErrorAsync(async (req: Request, res: Response, next: N
   // 生成 token，包含用戶 ID 和角色
   const token = generateToken({
     userId: googleReq.user.user._id,
-    role: googleReq.user.user.role
+    role: googleReq.user.user.role || 'user'  // 確保有默認角色
   });
 
   // 準備返回的用戶資料

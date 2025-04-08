@@ -50,6 +50,12 @@ export const verifyToken = (token: string): EmailTokenPayload | AuthTokenPayload
       if (decoded.exp * 1000 < Date.now()) {
         throw createHttpError(400, '驗證碼已過期');
       }
+      return decoded;
+    }
+    
+    // 檢查是否為認證 token
+    if (!('userId' in decoded) || !('role' in decoded)) {
+      throw createHttpError(401, '無效的 Token 格式');
     }
     
     return decoded;
@@ -57,7 +63,7 @@ export const verifyToken = (token: string): EmailTokenPayload | AuthTokenPayload
     if (error instanceof createHttpError.HttpError) {
       throw error;
     }
-    throw createHttpError(400, '無效的驗證碼');
+    throw createHttpError(401, '無效的 Token');
   }
 };
 

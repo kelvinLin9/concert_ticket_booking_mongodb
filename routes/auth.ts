@@ -84,6 +84,7 @@ passport.use(new GoogleStrategy({
           user = await UsersModel.create({
             email: profile.emails[0].value,
             avatar: profile.photos[0].value,
+            role: 'user',  // 確保設置默認角色
             oauthProviders: [oauthProvider]
           });
         }
