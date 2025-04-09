@@ -1,11 +1,8 @@
 import express from 'express';
 import {
   getUser,
-  getUsers,
   updateInfo,
   updateRole,
-  adminUpdateUserInfo,
-  adminDeleteUser,
 } from '../controller/user';
 import { checkRequestBodyValidator, isAuth } from '../middlewares/index';
 import { handleErrorAsync } from '../statusHandle/handleErrorAsync';
@@ -44,10 +41,5 @@ router.put('/profile', isAuth, checkRequestBodyValidator, handleErrorAsync(updat
 
 // 更新角色
 router.put('/update-role', isAuth, updateRole);
-
-// 管理員功能
-router.get('/', isAuth, getUsers);
-router.put('/:id', isAuth, adminUpdateUserInfo);
-router.delete('/:id', isAuth, adminDeleteUser);
 
 export default router;

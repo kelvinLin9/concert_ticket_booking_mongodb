@@ -15,6 +15,7 @@ import { specs } from './swagger';
 import authRouter from './routes/auth';
 import userRouter from './routes/users';
 import verifyRouter from './routes/verify';
+import adminRouter from './routes/admin';
 
 
 
@@ -52,6 +53,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/verify', verifyRouter);
+app.use('/api/v1/admin', adminRouter);
 
 // 錯誤處理中間件
 app.use((err: Error & { status?: number }, req: express.Request, res: express.Response, next: express.NextFunction) => {
