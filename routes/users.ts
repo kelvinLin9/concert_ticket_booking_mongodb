@@ -24,7 +24,7 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
   }
 
   const user = await UsersModel.findById(customReq.user.userId)
-    .select('-password -verificationToken -verificationTokenExpires -passwordResetToken -passwordResetExpires -lastVerificationAttempt');
+    .select('role');
 
   if (!user) {
     return res.status(404).json({
@@ -35,7 +35,8 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
 
   res.json({
     success: true,
-    user
+    role: user.role,
+    token: req.headers.authorization?.replace('Bearer ', '')
   });
 }));
 
