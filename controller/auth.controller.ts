@@ -7,7 +7,7 @@ import { sendVerificationEmail, sendPasswordResetEmail } from '../utils/email';
 
 // 註冊新用戶
 export const register = handleErrorAsync(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password, firstName, lastName, phone, birthday } = req.body;
 
   // 檢查必要欄位
   if (!email || !password) {
@@ -46,6 +46,10 @@ export const register = handleErrorAsync(async (req: Request, res: Response) => 
   const newUser = await User.create({
     email,
     password,  // 密碼會在 User model 的 pre-save hook 中自動加密
+    firstName,
+    lastName,
+    phone,
+    birthday: birthday ? new Date(birthday) : undefined,
     role: 'user',
     isEmailVerified: false,
     oauthProviders: []
@@ -72,6 +76,10 @@ export const register = handleErrorAsync(async (req: Request, res: Response) => 
     user: {
       _id: newUser._id,
       email: newUser.email,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      phone: newUser.phone,
+      birthday: newUser.birthday,
       role: newUser.role,
       isEmailVerified: newUser.isEmailVerified
     },

@@ -13,6 +13,9 @@ export interface IUser extends Document {
   _id: mongoose.Types.ObjectId;
   email: string;  // 主要識別符
   password?: string;  // 可選，因為可能使用 OAuth 登入
+  firstName?: string;  // 名字
+  lastName?: string;   // 姓氏
+  nickname?: string;   // 暱稱
   role: string;  // 用戶角色
   phone?: string;
   birthday?: Date;
@@ -78,6 +81,33 @@ const userSchema = new Schema<IUser>({
       },
       message: 'Email 格式不正確'
     }
+  },
+  firstName: {
+    type: String,
+    trim: true,
+    maxlength: [20, '名字不能超過20個字符'],
+    validate: {
+      validator: function(value: string) {
+        return !value || /^[\u4e00-\u9fa5a-zA-Z\s]{1,20}$/.test(value);
+      },
+      message: '名字只能包含中文、英文字母和空格'
+    }
+  },
+  lastName: {
+    type: String,
+    trim: true,
+    maxlength: [20, '姓氏不能超過20個字符'],
+    validate: {
+      validator: function(value: string) {
+        return !value || /^[\u4e00-\u9fa5a-zA-Z\s]{1,20}$/.test(value);
+      },
+      message: '姓氏只能包含中文、英文字母和空格'
+    }
+  },
+  nickname: {
+    type: String,
+    trim: true,
+    maxlength: [20, '暱稱不能超過20個字符']
   },
   password: {
     type: String,
