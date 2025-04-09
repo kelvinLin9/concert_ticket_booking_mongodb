@@ -212,7 +212,7 @@ export const resendVerification = handleErrorAsync(async (req: Request, res: Res
 
   // 檢查是否在冷卻時間內
   if (user.lastVerificationAttempt && 
-      Date.now() - user.lastVerificationAttempt.getTime() < 60000) { // 1分鐘冷卻時間
+      Date.now() - user.lastVerificationAttempt.getTime() < 600000) { // 10分鐘冷卻時間
     return res.status(400).json({
       success: false,
       message: '請稍後再試'
@@ -250,7 +250,7 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
 
   // 檢查是否在冷卻時間內
   if (user.lastVerificationAttempt && 
-      Date.now() - user.lastVerificationAttempt.getTime() < 60000) { // 1分鐘冷卻時間
+      Date.now() - user.lastVerificationAttempt.getTime() < 600000) { // 10分鐘冷卻時間
     return res.status(400).json({
       success: false,
       message: '請稍後再試'
