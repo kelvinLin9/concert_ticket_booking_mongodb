@@ -10,10 +10,15 @@ interface CustomRequest extends Request {
   };
 }
 
+// 檢查是否為管理員或超級用戶
+const isAdminOrSuperuser = (role: string): boolean => {
+  return role === 'admin' || role === 'superuser';
+};
+
 // 管理員專用：取得所有用戶資料
 const getUsers = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
   const customReq = req as CustomRequest;
-  if (!customReq.user || customReq.user.role !== 'admin') {
+  if (!customReq.user || !isAdminOrSuperuser(customReq.user.role)) {
     throw createHttpError(403, '無權限訪問');
   }
 
@@ -92,7 +97,7 @@ const getUsers = handleErrorAsync(async (req: Request, res: Response, next: Next
 // 管理員專用：更新用戶資料
 const updateUser = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
   const customReq = req as CustomRequest;
-  if (!customReq.user || customReq.user.role !== 'admin') {
+  if (!customReq.user || !isAdminOrSuperuser(customReq.user.role)) {
     throw createHttpError(403, '無權限訪問');
   }
 
@@ -126,7 +131,7 @@ const updateUser = handleErrorAsync(async (req: Request, res: Response, next: Ne
 // 管理員專用：刪除用戶
 const deleteUser = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
   const customReq = req as CustomRequest;
-  if (!customReq.user || customReq.user.role !== 'admin') {
+  if (!customReq.user || !isAdminOrSuperuser(customReq.user.role)) {
     throw createHttpError(403, '無權限訪問');
   }
 
