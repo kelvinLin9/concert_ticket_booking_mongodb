@@ -264,8 +264,8 @@ userSchema.methods.createVerificationToken = async function(): Promise<{ token: 
   // 生成 6 位數字驗證碼
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   
-  // 設置過期時間（15分鐘）
-  this.verificationTokenExpires = new Date(Date.now() + 15 * 60 * 1000);
+  // 設置過期時間（10分鐘）
+  this.verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000);
   
   // 記錄發送時間
   this.lastVerificationAttempt = new Date();
@@ -283,8 +283,8 @@ userSchema.methods.createPasswordResetToken = async function(): Promise<{ token:
   // 生成 6 位數字驗證碼
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   
-  // 設置過期時間（15分鐘）
-  this.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
+  // 設置過期時間（10分鐘）
+  this.passwordResetExpires = new Date(Date.now() + 10 * 60 * 1000);
   
   // 使用 bcrypt 加密驗證碼
   this.passwordResetToken = await bcrypt.hash(code, 1);

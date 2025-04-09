@@ -40,7 +40,7 @@ export const sendVerificationEmail = async (email: string, code: string) => {
       html: `
         <h1>電子郵件驗證</h1>
         <p>您的驗證碼是：<strong>${code}</strong></p>
-        <p>此驗證碼將在 15 分鐘後過期。</p>
+        <p>此驗證碼將在 10 分鐘後過期。</p>
         <p>如果這不是您的操作，請忽略此郵件。</p>
       `
     });
@@ -64,7 +64,7 @@ export const sendPasswordResetEmail = async (email: string, code: string) => {
       html: `
         <h1>密碼重置</h1>
         <p>您的密碼重置驗證碼是：<strong>${code}</strong></p>
-        <p>此驗證碼將在 15 分鐘後過期。</p>
+        <p>此驗證碼將在 10 分鐘後過期。</p>
         <p>如果這不是您的操作，請立即更改您的密碼。</p>
       `
     });
