@@ -37,7 +37,7 @@ const signup = handleErrorAsync(async (req: Request, res: Response, next: NextFu
   const { code } = await user.createVerificationToken();
 
   res.send({
-    status: true,
+    success: true,
     message: '註冊成功，請查收驗證碼郵件',
     user: {
       _id: user._id,
@@ -62,7 +62,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     res.send({
-      status: true,
+      success: true,
       user: {
         _id: user._id,
         email: user.email,
@@ -105,7 +105,7 @@ const forget = async (req: Request, res: Response, next: NextFunction) => {
     await user.save();
 
     res.send({ 
-      status: true,
+      success: true,
       message: '密碼重置成功'
     });
   } catch (error) {
@@ -151,13 +151,13 @@ const getUser = async (req: Request, res: Response, next: NextFunction) => {
 
     if (!user) {
       return res.status(404).send({
-        status: false,
+        success: false,
         message: '用戶未找到'
       });
     }
 
     res.send({
-      status: true,
+      success: true,
       result: user
     });
   } catch (error) {
@@ -254,7 +254,7 @@ const getUsers = async (req: Request, res: Response, next: NextFunction) => {
     const totalPages = Math.ceil(totalItems / limit);
 
     res.send({
-      status: true,
+      success: true,
       page,
       limit,
       totalPages,
@@ -333,7 +333,7 @@ const adminUpdateUserInfo = handleErrorAsync(async (req: Request, res: Response,
   }
 
   res.send({
-    status: true,
+    success: true,
     data: updatedUser
   });
 });
@@ -355,7 +355,7 @@ const adminDeleteUser = handleErrorAsync(async (req: Request, res: Response, nex
   }
 
   res.send({
-    status: true,
+    success: true,
     data: deletedUser
   });
 });
