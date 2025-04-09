@@ -122,23 +122,19 @@ const check = async (req: Request, res: Response) => {
     if (!payload || !('role' in payload)) {
       throw createHttpError(403, '無訪問權限');
     }
-    const customReq = req as CustomRequest;
-    if (!customReq.user) {
-      throw createHttpError(401, '請先登入');
-    }
-    const user = await UsersModel.findById(customReq.user.userId);
+    
     res.send({
       status: true,
-      token,
-      user,
+      isAuthenticated: true,
       role: payload.role,
+      userId: payload.userId
     });
   } catch (error) {
-    if (error instanceof Error) {
-      res.status(401).send({ status: false, message: error.message });
-    } else {
-      res.status(401).send({ status: false, message: '未知錯誤' });
-    }
+    res.status(401).send({ 
+      status: false, 
+      isAuthenticated: false,
+      message: error instanceof Error ? error.message : '未知錯誤' 
+    });
   }
 };
 const getUser = async (req: Request, res: Response, next: NextFunction) => {
