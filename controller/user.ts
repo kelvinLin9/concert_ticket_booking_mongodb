@@ -204,19 +204,25 @@ const updateInfo = handleErrorAsync(async (req: Request, res: Response, next: Ne
     }
   }
 
+  // 更新用戶資料
   const updatedUser = await UsersModel.findByIdAndUpdate(
     customReq.user.userId,
     {
-      phone,
-      birthday,
-      gender,
-      preferredRegions,
-      preferredEventTypes,
-      country,
-      address
+      $set: {
+        ...(phone && { phone }),
+        ...(birthday && { birthday: new Date(birthday) }),
+        ...(gender && { gender }),
+        ...(preferredRegions && { preferredRegions }),
+        ...(preferredEventTypes && { preferredEventTypes }),
+        ...(country && { country }),
+        ...(address && { address })
+      }
     },
-    { new: true, runValidators: true }
-  ).select('-password -verificationToken');
+    {
+      new: true,
+      runValidators: true
+    }
+  ).select('-password -verificationToken -verificationTokenExpires -passwordResetToken -passwordResetExpires -lastVerificationAttempt');
 
   if (!updatedUser) {
     throw createHttpError(404, '找不到用戶資料');
@@ -224,8 +230,7 @@ const updateInfo = handleErrorAsync(async (req: Request, res: Response, next: Ne
 
   res.json({
     success: true,
-    message: '個人資料已更新',
-    user: updatedUser
+    data: updatedUser
   });
 });
 
