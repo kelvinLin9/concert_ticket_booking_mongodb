@@ -274,6 +274,14 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
 export const resetPassword = handleErrorAsync(async (req: Request, res: Response) => {
   const { email, code, newPassword } = req.body;
 
+  // 檢查密碼長度
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({
+      success: false,
+      message: '密碼長度至少為6個字符'
+    });
+  }
+
   const user = await User.findOne({ email }).select('+passwordResetToken +passwordResetExpires');
   if (!user) {
     return res.status(404).json({
