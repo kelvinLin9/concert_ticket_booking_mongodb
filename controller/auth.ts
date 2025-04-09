@@ -74,14 +74,13 @@ const googleLogin = handleErrorAsync(async (req: Request, res: Response, next: N
   if (req.method === 'POST') {
     return res.json({
       success: true,
-      token: token,
-      user: userData  // 添加用戶資料到回應中
+      token: token
     });
   }
 
   // 如果是 GET 請求 (來自 Google 重定向)
   const redirectUrl = googleReq.query.state || process.env.FRONTEND_URL || 'http://localhost:3010/callback';
-  res.redirect(`${redirectUrl}?token=${token}&userData=${encodeURIComponent(JSON.stringify(userData))}`);
+  res.redirect(`${redirectUrl}?token=${token}`);
 });
 
 
