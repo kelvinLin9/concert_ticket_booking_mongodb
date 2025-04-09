@@ -35,6 +35,14 @@ passport.use(new GoogleStrategy({
 },
 async function (req, accessToken, refreshToken, profile, done) {
   try {
+    console.log('Google Profile:', {
+      id: profile.id,
+      displayName: profile.displayName,
+      emails: profile.emails,
+      photos: profile.photos,
+      _json: profile._json
+    });
+
     // 先尋找是否有使用 Google 登入的用戶
     let user = await UsersModel.findOne({
       'oauthProviders.provider': 'google',
@@ -63,6 +71,10 @@ async function (req, accessToken, refreshToken, profile, done) {
             refreshToken,
             tokenExpiresAt: new Date(Date.now() + 3600000) // 1小時後過期
           });
+          // 更新用戶頭像
+          if (profile.photos && profile.photos[0]) {
+            user.avatar = profile.photos[0].value;
+          }
           await user.save();
         }
       } else {
@@ -90,7 +102,7 @@ async function (req, accessToken, refreshToken, profile, done) {
         });
       }
     } else {
-      // 如果找到用戶，更新 OAuth provider 資訊
+      // 如果找到用戶，更新 OAuth provider 資訊和頭像
       const existingProvider = user.oauthProviders.find(
         provider => provider.provider === 'google' && provider.providerId === profile.id
       );
@@ -109,6 +121,10 @@ async function (req, accessToken, refreshToken, profile, done) {
           refreshToken,
           tokenExpiresAt: new Date(Date.now() + 3600000)
         });
+      }
+      // 更新用戶頭像
+      if (profile.photos && profile.photos[0]) {
+        user.avatar = profile.photos[0].value;
       }
       await user.save();
     }
@@ -129,8 +145,10 @@ async function (req, accessToken, refreshToken, profile, done) {
       }
     };
     
+    console.log('User Data being sent:', userData);
     return done(null, userData);
   } catch (err) {
+    console.error('Google Strategy Error:', err);
     return done(err);
   }
 }));

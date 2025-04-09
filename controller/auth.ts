@@ -27,6 +27,12 @@ interface GoogleRequest extends Request {
 const googleLogin = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
   const googleReq = req as GoogleRequest;
 
+  console.log('Google Login Request:', {
+    user: googleReq.user,
+    method: req.method,
+    query: req.query
+  });
+
   // 檢查必要的用戶數據
   if (!googleReq.user || !googleReq.user.user || !googleReq.user.user._id) {
     return res.status(400).json({
@@ -59,17 +65,23 @@ const googleLogin = handleErrorAsync(async (req: Request, res: Response, next: N
     discord: googleReq.user.user.discord
   };
 
+  console.log('Google Login Response Data:', {
+    token,
+    userData
+  });
+
   // 如果是 POST 請求 (直接從前端發來的)
   if (req.method === 'POST') {
     return res.json({
       success: true,
-      token: token
+      token: token,
+      user: userData  // 添加用戶資料到回應中
     });
   }
 
   // 如果是 GET 請求 (來自 Google 重定向)
   const redirectUrl = googleReq.query.state || process.env.FRONTEND_URL || 'http://localhost:3010/callback';
-  res.redirect(`${redirectUrl}?token=${token}`);
+  res.redirect(`${redirectUrl}?token=${token}&userData=${encodeURIComponent(JSON.stringify(userData))}`);
 });
 
 
