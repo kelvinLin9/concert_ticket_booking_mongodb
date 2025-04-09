@@ -99,8 +99,10 @@ export const login = handleErrorAsync(async (req: Request, res: Response) => {
     });
   }
 
-  // 查找用戶
-  const user = await User.findOne({ email });
+  // 查找用戶，包含密碼欄位
+  const user = await User.findOne({ email }).select('+password');
+  
+  // 檢查用戶是否存在
   if (!user) {
     return res.status(401).json({
       success: false,
@@ -108,8 +110,16 @@ export const login = handleErrorAsync(async (req: Request, res: Response) => {
     });
   }
 
+  // 檢查是否有密碼（排除 OAuth 用戶）
+  if (!user.password) {
+    return res.status(401).json({
+      success: false,
+      message: '此帳號使用第三方登入，請使用正確的登入方式'
+    });
+  }
+
   // 驗證密碼
-  const isMatch = await bcrypt.compare(password, user.password || '');
+  const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     return res.status(401).json({
       success: false,
