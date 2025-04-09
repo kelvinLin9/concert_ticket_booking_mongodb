@@ -24,7 +24,7 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
   }
 
   const user = await UsersModel.findById(customReq.user.userId)
-    .select('-password -verificationToken');
+    .select('-password -verificationToken -verificationTokenExpires -passwordResetToken -passwordResetExpires -lastVerificationAttempt');
 
   if (!user) {
     return res.status(404).json({
@@ -33,22 +33,9 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
     });
   }
 
-  // 準備完整的用戶資料
-  const userData = {
-    _id: user._id,
-    email: user.email,
-    role: user.role,
-    isEmailVerified: user.isEmailVerified,
-    oauthProviders: user.oauthProviders,
-    phone: user.phone,
-    address: user.address,
-    birthday: user.birthday,
-    gender: user.gender
-  };
-
   res.json({
     success: true,
-    user: userData
+    user
   });
 }));
 
