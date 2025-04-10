@@ -240,34 +240,47 @@ export const resendVerification = handleErrorAsync(async (req: Request, res: Res
 export const requestPasswordReset = handleErrorAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(404).json({
+  try {
+    // 1. 原子性地檢查和更新冷卻時間
+    const user = await User.findOneAndUpdate(
+      { 
+        email,
+        $or: [
+          { lastVerificationAttempt: { $exists: false } },
+          { lastVerificationAttempt: { $lt: new Date(Date.now() - 600000) } }
+        ]
+      },
+      { 
+        $set: { lastVerificationAttempt: new Date() }
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: '請稍後再試'
+      });
+    }
+
+    // 2. 生成重置 token
+    const { code } = await user.createPasswordResetToken();
+    await user.save();
+
+    // 3. 發送郵件
+    await sendPasswordResetEmail(user.email, code);
+
+    res.json({
+      success: true,
+      message: '密碼重置郵件已發送'
+    });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({
       success: false,
-      message: '找不到此用戶'
+      message: '郵件發送失敗，請稍後再試'
     });
   }
-
-  // 檢查是否在冷卻時間內
-  if (user.lastVerificationAttempt && 
-      Date.now() - user.lastVerificationAttempt.getTime() < 600000) { // 10分鐘冷卻時間
-    return res.status(400).json({
-      success: false,
-      message: '請稍後再試'
-    });
-  }
-
-  const { code } = await user.createPasswordResetToken();
-  user.lastVerificationAttempt = new Date();
-  await user.save();
-
-  // 發送密碼重置郵件
-  await sendPasswordResetEmail(user.email, code);
-
-  res.json({
-    success: true,
-    message: '密碼重置郵件已發送'
-  });
 });
 
 // 重置密碼
