@@ -239,73 +239,53 @@ export const resendVerification = handleErrorAsync(async (req: Request, res: Res
 // 請求密碼重置
 export const requestPasswordReset = handleErrorAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
+  const now = new Date();
+  const cooldownTime = 600000; // 10分鐘，單位：毫秒
 
-  try {
-    const now = new Date();
-    const cooldownTime = 600000; // 10分鐘，單位：毫秒
+  // 先檢查用戶是否存在
+  const existingUser = await User.findOne({ email });
+  
+  if (!existingUser) {
+    return res.status(400).json({
+      success: false,
+      message: '該信箱未註冊'
+    });
+  }
 
-    // 使用 findOneAndUpdate 進行原子性操作
-    const user = await User.findOneAndUpdate(
-      { 
-        email,
-        isEmailVerified: true,
-        $or: [
-          { lastVerificationAttempt: { $exists: false } },
-          { 
-            lastVerificationAttempt: { 
-              $lt: new Date(now.getTime() - cooldownTime)
-            }
-          }
-        ]
-      },
-      { 
-        $set: { lastVerificationAttempt: now }
-      },
-      { new: true }
+  // 檢查用戶是否已驗證
+  if (!existingUser.isEmailVerified) {
+    return res.status(400).json({
+      success: false,
+      message: '請先驗證您的郵箱'
+    });
+  }
+
+  // 檢查冷卻時間
+  if (existingUser.lastVerificationAttempt && 
+      (now.getTime() - existingUser.lastVerificationAttempt.getTime()) < cooldownTime) {
+    const remainingSeconds = Math.ceil(
+      (cooldownTime - (now.getTime() - existingUser.lastVerificationAttempt.getTime())) / 1000
     );
+    return res.status(400).json({
+      success: false,
+      message: '請稍後再試',
+      remainingSeconds
+    });
+  }
 
-    if (!user) {
-      // 檢查用戶是否存在但未驗證
-      const unverifiedUser = await User.findOne({ email, isEmailVerified: false });
-      if (unverifiedUser) {
-        return res.status(400).json({
-          success: false,
-          message: '請先驗證您的郵箱'
-        });
-      }
-
-      // 檢查是否在冷卻時間內
-      const cooldownUser = await User.findOne({ 
-        email,
-        lastVerificationAttempt: { 
-          $gte: new Date(now.getTime() - cooldownTime)
-        }
-      });
-
-      if (cooldownUser && cooldownUser.lastVerificationAttempt) {
-        const remainingSeconds = Math.ceil((cooldownTime - (now.getTime() - cooldownUser.lastVerificationAttempt.getTime())) / 1000);
-        return res.status(400).json({
-          success: false,
-          message: '請稍後再試',
-          remainingSeconds
-        });
-      }
-
-      return res.status(400).json({
-        success: false,
-        message: '該信箱未註冊'
-      });
-    }
-
+  // 更新最後嘗試時間
+  existingUser.lastVerificationAttempt = now;
+  
+  try {
     // 生成重置 token
-    const { code } = await user.createPasswordResetToken();
-    await user.save();
+    const { code } = await existingUser.createPasswordResetToken();
+    await existingUser.save();
 
     // 發送郵件
-    await sendPasswordResetEmail(user.email, code);
+    await sendPasswordResetEmail(existingUser.email, code);
 
     res.json({
-      success: true,
+      success: false,
       message: '密碼重置郵件已發送'
     });
   } catch (error) {
