@@ -1,0 +1,142 @@
+// User Model
+Table User {
+  _id ObjectId [pk]
+  email String [unique, not null, note: "主要識別符"]
+  password String [null, note: "可選，因為可能使用 OAuth 登入"]
+  firstName String [null, note: "名字"]
+  lastName String [null, note: "姓氏"]
+  nickname String [null, note: "暱稱"]
+  role String [not null, note: "user, admin, superuser"]
+  phone String [null]
+  birthday Date [null]
+  gender String [null, note: "male, female, other"]
+  preferredRegions String[] [null, note: "north, south, east, central, offshore, overseas"]
+  preferredConcertTypes String[] [null, note: "pop, rock, electronic, hip-hop, jazz-blues, classical, other"]
+  country String [null]
+  address String [null]
+  avatar String [null]
+  verificationToken String [null, note: "驗證碼 token"]
+  verificationTokenExpires Date [null, note: "驗證碼過期時間"]
+  isEmailVerified Boolean [not null, default: false, note: "郵件是否已驗證"]
+  passwordResetToken String [null, note: "重置密碼 token"]
+  passwordResetExpires Date [null, note: "重置密碼 token 過期時間"]
+  lastVerificationAttempt Date [null, note: "上次發送驗證碼的時間"]
+  createdAt DateTime [not null]
+  updatedAt DateTime [not null]
+  oauthProviders JSON [note: "嵌入式 OAuth 提供者資訊"]
+}
+
+// Organizer Model
+Table Organizer {
+  _id ObjectId [pk]
+  companyName String [not null, note: "公司名稱"]
+  companyAddress String [not null, note: "公司地址"]
+  website String [null, note: "公司網站"]
+  contactPerson JSON [not null, note: "嵌入式聯絡人資訊"]
+  userId ObjectId [not null]
+  status String [not null, default: "active", note: "active, inactive, blocked"]
+  verificationStatus String [not null, default: "unverified", note: "unverified, pending, verified"]
+  createdAt DateTime [not null]
+  updatedAt DateTime [not null]
+  createdConcerts ObjectId[] [note: "引用的 Concert ID 列表"]
+}
+
+// Concert Model (活動/演唱會)
+Table Concert {
+  _id ObjectId [pk]
+  title String [not null, note: "活動標題"]
+  description String [not null, note: "活動描述"]
+  concertType String [not null, note: "活動類型 pop/rock/electronic/hip-hop/jazz-blues/classical/other"]
+  image String [null, note: "活動圖片 URL"]
+  startDate DateTime [not null, note: "活動開始時間"]
+  endDate DateTime [not null, note: "活動結束時間"]
+  status String [not null, default: "draft", note: "draft/published/canceled/completed"]
+  organizerId ObjectId [not null, note: "主辦方"]
+  venueId ObjectId [not null, note: "場地"]
+  totalTickets Number [not null, note: "總票數"]
+  soldTickets Number [not null, default: 0, note: "已售票數"]
+  region String [not null, note: "活動區域 north/south/east/central/offshore/overseas"]
+  featured Boolean [default: false, note: "是否為精選活動"]
+  createdAt DateTime [not null]
+  updatedAt DateTime [not null]
+}
+
+// Venue Model (場地)
+Table Venue {
+  _id ObjectId [pk]
+  name String [not null, note: "場地名稱"]
+  address String [not null, note: "場地地址"]
+  region String [not null, note: "區域 north/south/east/central/offshore/overseas"]
+  capacity Number [not null, note: "場地容量"]
+  contactInfo JSON [null, note: "場地聯絡資訊"]
+  seatingChart String [null, note: "座位圖 URL"]
+  createdAt DateTime [not null]
+  updatedAt DateTime [not null]
+}
+
+// Ticket Model (票種)
+Table Ticket {
+  _id ObjectId [pk]
+  concertId ObjectId [not null, note: "關聯活動"]
+  name String [not null, note: "票種名稱 (例如: VIP, 一般票)"]
+  price Number [not null, note: "票價"]
+  quantity Number [not null, note: "該票種數量"]
+  sold Number [not null, default: 0, note: "該票種已售數量"]
+  seatInfo JSON [null, note: "座位資訊"]
+  saleStartDate DateTime [not null, note: "開始售票時間"]
+  saleEndDate DateTime [not null, note: "結束售票時間"]
+  status String [not null, default: "available", note: "available/sold-out/off-sale"]
+  isReserved Boolean [default: false, note: "是否為保留票"]
+  createdAt DateTime [not null]
+  updatedAt DateTime [not null]
+}
+
+// Order Model (訂單)
+Table Order {
+  _id ObjectId [pk]
+  userId ObjectId [not null, note: "購買用戶"]
+  concertId ObjectId [not null, note: "關聯活動"]
+  orderNumber String [unique, not null, note: "訂單編號"]
+  status String [not null, note: "pending/paid/canceled/refunded"]
+  totalAmount Number [not null, note: "訂單總金額"]
+  paymentInfo JSON [null, note: "支付資訊"]
+  tickets JSON [not null, note: "購買的票券資訊"]
+  purchaseDate DateTime [not null, note: "購買時間"]
+  contactInfo JSON [not null, note: "訂單聯絡資訊"]
+  notes String [null, note: "訂單備註"]
+  createdAt DateTime [not null]
+  updatedAt DateTime [not null]
+}
+
+// Payment Model (支付資訊)
+Table Payment {
+  _id ObjectId [pk]
+  orderId ObjectId [not null, note: "關聯訂單"]
+  paymentMethod String [not null, note: "支付方式"]
+  amount Number [not null, note: "支付金額"]
+  currency String [not null, default: "TWD", note: "貨幣"]
+  status String [not null, note: "pending/success/failed/refunded"]
+  transactionId String [null, note: "交易 ID"]
+  paymentDate DateTime [null, note: "支付時間"]
+  refundDate DateTime [null, note: "退款時間"]
+  refundAmount Number [null, note: "退款金額"]
+  gatewayResponse JSON [null, note: "支付閘道回應"]
+  createdAt DateTime [not null]
+  updatedAt DateTime [not null]
+}
+
+// References
+Ref: Organizer.userId > User._id
+Ref: Concert.organizerId > Organizer._id
+Ref: Concert.venueId > Venue._id
+Ref: Ticket.concertId > Concert._id
+Ref: Order.userId > User._id
+Ref: Order.concertId > Concert._id
+Ref: Payment.orderId > Order._id
+
+// Notes
+// 1. 在 MongoDB 中，oauthProviders 是嵌入在 User 文檔中的，使用 JSON 類型表示
+// 2. contactPerson 是嵌入在 Organizer 文檔中的，使用 JSON 類型表示
+// 3. tickets 是嵌入在 Order 文檔中的，包含票券詳細資訊
+// 4. paymentInfo 是嵌入在 Order 文檔中的，包含支付基本資訊
+// 5. contactInfo 在不同模型中使用，是嵌入式文檔 
