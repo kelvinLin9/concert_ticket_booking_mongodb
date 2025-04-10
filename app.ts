@@ -80,53 +80,63 @@ app.use((err: Error & {
   // 測試環境中返回完整錯誤信息
   const isDevelopment = process.env.NODE_ENV === 'development';
   
-  if (isAppError) {
-    // 構建錯誤響應對象
-    const errorResponse: any = {
-      success: false,
-      message: err.message,
-      errorCode: err.code || 'ERROR'
-    };
+  // 先一律這樣返回
+  res.status(statusCode).json({
+    success: false,
+    message: err.message || '系統發生錯誤',
+    // errorCode: 'SYSTEM_ERROR',
+    // stack: err.stack,
+    // error: err
+  });
+
+
+  // if (isAppError) {
+  //   // 構建錯誤響應對象
+  //   const errorResponse: any = {
+  //     success: false,
+  //     message: err.message,
+  //     errorCode: err.code || 'ERROR'
+  //   };
     
-    // 添加可能的其他自定義屬性
-    if (err.remainingSeconds) {
-      errorResponse.remainingSeconds = err.remainingSeconds;
-    }
+  //   // 添加可能的其他自定義屬性
+  //   if (err.remainingSeconds) {
+  //     errorResponse.remainingSeconds = err.remainingSeconds;
+  //   }
     
-    // 添加任何其他用戶定義的屬性，但排除內部屬性
-    Object.keys(err).forEach(key => {
-      if (!['status', 'code', 'isOperational', 'message', 'stack', 'name'].includes(key)) {
-        errorResponse[key] = err[key];
-      }
-    });
+  //   // 添加任何其他用戶定義的屬性，但排除內部屬性
+  //   Object.keys(err).forEach(key => {
+  //     if (!['status', 'code', 'isOperational', 'message', 'stack', 'name'].includes(key)) {
+  //       errorResponse[key] = err[key];
+  //     }
+  //   });
     
-    res.status(statusCode).json(errorResponse);
-  } else {
-    // 當為非操作型錯誤時（如系統異常、程序錯誤）
-    // if (isDevelopment) {
-    //   res.status(statusCode).json({
-    //     success: false,
-    //     message: err.message || '系統發生錯誤',
-    //     errorCode: 'SYSTEM_ERROR',
-    //     stack: err.stack,
-    //     error: err
-    //   });
-    // } else {
-    //   res.status(statusCode).json({
-    //     success: false,
-    //     message: '系統發生錯誤',
-    //     errorCode: 'SYSTEM_ERROR'
-    //   });
-    // }
-    // 先一律這樣返回
-    res.status(statusCode).json({
-      success: false,
-      message: err.message || '系統發生錯誤',
-      // errorCode: 'SYSTEM_ERROR',
-      // stack: err.stack,
-      error: err
-    });
-  }
+  //   res.status(statusCode).json(errorResponse);
+  // } else {
+  //   // 當為非操作型錯誤時（如系統異常、程序錯誤）
+  //   // if (isDevelopment) {
+  //   //   res.status(statusCode).json({
+  //   //     success: false,
+  //   //     message: err.message || '系統發生錯誤',
+  //   //     errorCode: 'SYSTEM_ERROR',
+  //   //     stack: err.stack,
+  //   //     error: err
+  //   //   });
+  //   // } else {
+  //   //   res.status(statusCode).json({
+  //   //     success: false,
+  //   //     message: '系統發生錯誤',
+  //   //     errorCode: 'SYSTEM_ERROR'
+  //   //   });
+  //   // }
+  //   // 先一律這樣返回
+  //   // res.status(statusCode).json({
+  //   //   success: false,
+  //   //   message: err.message || '系統發生錯誤',
+  //   //   // errorCode: 'SYSTEM_ERROR',
+  //   //   // stack: err.stack,
+  //   //   error: err
+  //   // });
+  // }
 });
 
 // 404 處理中間件
