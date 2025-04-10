@@ -195,7 +195,7 @@ export const verifyEmail = handleErrorAsync(async (req: Request, res: Response) 
 export const resendVerification = handleErrorAsync(async (req: Request, res: Response) => {
   const { email } = req.body;
 
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email }).select('+lastVerificationAttempt');
   if (!user) {
     return res.status(404).json({
       success: false,
@@ -213,9 +213,13 @@ export const resendVerification = handleErrorAsync(async (req: Request, res: Res
   // 檢查是否在冷卻時間內
   if (user.lastVerificationAttempt && 
       Date.now() - user.lastVerificationAttempt.getTime() < 600000) { // 10分鐘冷卻時間
+    const remainingSeconds = Math.ceil(
+      (600000 - (Date.now() - user.lastVerificationAttempt.getTime())) / 1000
+    );
     return res.status(400).json({
       success: false,
-      message: '請稍後再試'
+      message: '請稍後再試',
+      remainingSeconds
     });
   }
 
@@ -242,8 +246,8 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
   const now = new Date();
   const cooldownTime = 600000; // 10分鐘，單位：毫秒
 
-  // 先檢查用戶是否存在
-  const existingUser = await User.findOne({ email });
+  // 先檢查用戶是否存在，明確選擇 lastVerificationAttempt 欄位
+  const existingUser = await User.findOne({ email }).select('+lastVerificationAttempt');
   
   if (!existingUser) {
     return res.status(400).json({
@@ -260,12 +264,19 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
     });
   }
 
+  // 輸出除錯信息
+  console.log('上次嘗試時間:', existingUser.lastVerificationAttempt);
+  console.log('當前時間:', now);
+  console.log('冷卻時間(毫秒):', cooldownTime);
+  
   // 檢查冷卻時間
   if (existingUser.lastVerificationAttempt && 
       (now.getTime() - existingUser.lastVerificationAttempt.getTime()) < cooldownTime) {
     const remainingSeconds = Math.ceil(
       (cooldownTime - (now.getTime() - existingUser.lastVerificationAttempt.getTime())) / 1000
     );
+    console.log('剩餘冷卻時間(秒):', remainingSeconds);
+    
     return res.status(400).json({
       success: false,
       message: '請稍後再試',
@@ -276,6 +287,7 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
   // 更新最後嘗試時間
   existingUser.lastVerificationAttempt = now;
   await existingUser.save(); // 立即保存更新的冷卻時間
+  console.log('已更新冷卻時間:', existingUser.lastVerificationAttempt);
   
   try {
     // 生成重置 token
@@ -332,7 +344,13 @@ export const resetPassword = handleErrorAsync(async (req: Request, res: Response
     });
   }
 
+  // 除錯信息
+  console.log('驗證碼:', code);
+  console.log('重置 token:', user.passwordResetToken);
+  
   const payload = verifyToken(user.passwordResetToken);
+  console.log('解析 token 結果:', payload);
+  
   if (!('code' in payload) || payload.code !== code) {
     return res.status(400).json({
       success: false,
