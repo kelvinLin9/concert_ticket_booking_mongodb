@@ -171,7 +171,22 @@ const updateInfo = handleErrorAsync(async (req: Request, res: Response, next: Ne
     throw createHttpError(401, '請先登入');
   }
 
-  const { phone, birthday, gender, preferredRegions, preferredEventTypes, country, address } = req.body;
+  const { firstName, lastName, nickname, phone, birthday, gender, preferredRegions, preferredEventTypes, country, address, avatar } = req.body;
+
+  // 驗證 firstName
+  if (firstName && (firstName.length > 20 || !/^[\u4e00-\u9fa5a-zA-Z\s]{1,20}$/.test(firstName))) {
+    throw createHttpError(400, '名字只能包含中文、英文字母和空格，且不能超過20個字符');
+  }
+  
+  // 驗證 lastName
+  if (lastName && (lastName.length > 20 || !/^[\u4e00-\u9fa5a-zA-Z\s]{1,20}$/.test(lastName))) {
+    throw createHttpError(400, '姓氏只能包含中文、英文字母和空格，且不能超過20個字符');
+  }
+  
+  // 驗證 nickname
+  if (nickname && nickname.length > 20) {
+    throw createHttpError(400, '暱稱不能超過20個字符');
+  }
 
   // 驗證手機號碼格式
   if (phone && !/^[0-9]{10}$/.test(phone)) {
@@ -203,19 +218,28 @@ const updateInfo = handleErrorAsync(async (req: Request, res: Response, next: Ne
       throw createHttpError(400, '偏好活動類型選項不正確');
     }
   }
+  
+  // 驗證 avatar
+  if (avatar && !/^https?:\/\/.+/.test(avatar)) {
+    throw createHttpError(400, '頭像 URL 格式不正確');
+  }
 
   // 更新用戶資料
   const updatedUser = await UsersModel.findByIdAndUpdate(
     customReq.user.userId,
     {
       $set: {
+        ...(firstName && { firstName }),
+        ...(lastName && { lastName }),
+        ...(nickname && { nickname }),
         ...(phone && { phone }),
         ...(birthday && { birthday: new Date(birthday) }),
         ...(gender && { gender }),
         ...(preferredRegions && { preferredRegions }),
         ...(preferredEventTypes && { preferredEventTypes }),
         ...(country && { country }),
-        ...(address && { address })
+        ...(address && { address }),
+        ...(avatar && { avatar })
       }
     },
     {
