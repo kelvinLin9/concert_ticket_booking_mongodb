@@ -241,28 +241,8 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
   const { email } = req.body;
 
   try {
-    // 1. 原子性地檢查和更新冷卻時間
-    const now = new Date();
-    const cooldownTime = 600000; // 10分鐘，單位：毫秒
-
-    const user = await User.findOneAndUpdate(
-      { 
-        email,
-        $or: [
-          { lastVerificationAttempt: { $exists: false } },
-          { 
-            lastVerificationAttempt: { 
-              $lt: new Date(now.getTime() - cooldownTime)
-            }
-          }
-        ]
-      },
-      { 
-        $set: { lastVerificationAttempt: now }
-      },
-      { new: true }
-    );
-
+    // 1. 先檢查用戶是否存在和冷卻時間
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -270,11 +250,29 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
       });
     }
 
-    // 2. 生成重置 token
+    const now = new Date();
+    const cooldownTime = 600000; // 10分鐘，單位：毫秒
+
+    // 如果用戶在冷卻時間內
+    if (user.lastVerificationAttempt && 
+        (now.getTime() - user.lastVerificationAttempt.getTime() < cooldownTime)) {
+      const remainingSeconds = Math.ceil((cooldownTime - (now.getTime() - user.lastVerificationAttempt.getTime())) / 1000);
+      return res.status(400).json({
+        success: false,
+        message: '請稍後再試',
+        remainingSeconds
+      });
+    }
+
+    // 2. 更新冷卻時間
+    user.lastVerificationAttempt = now;
+    await user.save();
+
+    // 3. 生成重置 token
     const { code } = await user.createPasswordResetToken();
     await user.save();
 
-    // 3. 發送郵件
+    // 4. 發送郵件
     await sendPasswordResetEmail(user.email, code);
 
     res.json({
