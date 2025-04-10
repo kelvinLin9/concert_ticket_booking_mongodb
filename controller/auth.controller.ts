@@ -106,7 +106,8 @@ export const login = handleErrorAsync(async (req: Request, res: Response) => {
   if (!user) {
     return res.status(401).json({
       success: false,
-      message: '電子郵件或密碼錯誤'
+      message: '帳號或密碼錯誤',
+      errorCode: 'INVALID_CREDENTIALS'
     });
   }
 
@@ -114,7 +115,8 @@ export const login = handleErrorAsync(async (req: Request, res: Response) => {
   if (!user.password) {
     return res.status(401).json({
       success: false,
-      message: '此帳號使用第三方登入，請使用正確的登入方式'
+      message: '此帳號使用第三方登入，請使用對應的登入方式',
+      errorCode: 'OAUTH_USER'
     });
   }
 
@@ -123,7 +125,18 @@ export const login = handleErrorAsync(async (req: Request, res: Response) => {
   if (!isMatch) {
     return res.status(401).json({
       success: false,
-      message: '電子郵件或密碼錯誤'
+      message: '帳號或密碼錯誤',
+      errorCode: 'INVALID_CREDENTIALS'
+    });
+  }
+
+  // 檢查郵箱是否已驗證
+  if (!user.isEmailVerified) {
+    return res.status(403).json({
+      success: false,
+      message: '請先驗證您的電子郵件',
+      errorCode: 'EMAIL_NOT_VERIFIED',
+      email: user.email
     });
   }
 
@@ -138,6 +151,8 @@ export const login = handleErrorAsync(async (req: Request, res: Response) => {
     user: {
       _id: user._id,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       role: user.role,
       isEmailVerified: user.isEmailVerified
     },
