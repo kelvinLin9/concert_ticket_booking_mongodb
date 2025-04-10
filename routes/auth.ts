@@ -1,7 +1,5 @@
 import { Router } from 'express';
 import {
-  login,
-  signup,
   check,
 } from '../controller/user';
 import { googleLogin } from '../controller/auth';
@@ -13,6 +11,7 @@ dotenv.config();
 import UsersModel from '../models/user';
 import { handleErrorAsync } from '../statusHandle/handleErrorAsync';
 import { 
+  login,
   register, 
   verifyEmail, 
   resendVerification, 
