@@ -241,38 +241,67 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
   const { email } = req.body;
 
   try {
-    // 1. 先檢查用戶是否存在和冷卻時間
-    const user = await User.findOne({ email });
+    const now = new Date();
+    const cooldownTime = 600000; // 10分鐘，單位：毫秒
+
+    // 使用 findOneAndUpdate 進行原子性操作
+    const user = await User.findOneAndUpdate(
+      { 
+        email,
+        isEmailVerified: true,
+        $or: [
+          { lastVerificationAttempt: { $exists: false } },
+          { 
+            lastVerificationAttempt: { 
+              $lt: new Date(now.getTime() - cooldownTime)
+            }
+          }
+        ]
+      },
+      { 
+        $set: { lastVerificationAttempt: now }
+      },
+      { new: true }
+    );
+
     if (!user) {
+      // 檢查用戶是否存在但未驗證
+      const unverifiedUser = await User.findOne({ email, isEmailVerified: false });
+      if (unverifiedUser) {
+        return res.status(400).json({
+          success: false,
+          message: '請先驗證您的郵箱'
+        });
+      }
+
+      // 檢查是否在冷卻時間內
+      const cooldownUser = await User.findOne({ 
+        email,
+        lastVerificationAttempt: { 
+          $gte: new Date(now.getTime() - cooldownTime)
+        }
+      });
+
+      if (cooldownUser && cooldownUser.lastVerificationAttempt) {
+        const remainingSeconds = Math.ceil((cooldownTime - (now.getTime() - cooldownUser.lastVerificationAttempt.getTime())) / 1000);
+        return res.status(400).json({
+          success: false,
+          message: '請稍後再試',
+          remainingSeconds
+        });
+      }
+
       return res.status(400).json({
         success: false,
         message: '請稍後再試'
       });
     }
 
-    const now = new Date();
-    const cooldownTime = 600000; // 10分鐘，單位：毫秒
-
-    // 如果用戶在冷卻時間內
-    if (user.lastVerificationAttempt && 
-        (now.getTime() - user.lastVerificationAttempt.getTime() < cooldownTime)) {
-      const remainingSeconds = Math.ceil((cooldownTime - (now.getTime() - user.lastVerificationAttempt.getTime())) / 1000);
-      return res.status(400).json({
-        success: false,
-        message: '請稍後再試',
-        remainingSeconds
-      });
-    }
-
-    // 2. 更新冷卻時間
-    user.lastVerificationAttempt = now;
-    await user.save();
-
-    // 3. 生成重置 token
+    // 生成重置 token
     const { code } = await user.createPasswordResetToken();
     await user.save();
 
-    // 4. 發送郵件
+    // 發送郵件
     await sendPasswordResetEmail(user.email, code);
 
     res.json({
