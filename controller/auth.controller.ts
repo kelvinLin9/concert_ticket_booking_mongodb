@@ -348,10 +348,11 @@ export const resetPassword = handleErrorAsync(async (req: Request, res: Response
   console.log('驗證碼:', code);
   console.log('重置 token:', user.passwordResetToken);
   
-  const payload = verifyToken(user.passwordResetToken);
-  console.log('解析 token 結果:', payload);
+  // 使用 bcrypt 比較驗證碼
+  const isMatch = await bcrypt.compare(code, user.passwordResetToken);
+  console.log('驗證碼比對結果:', isMatch);
   
-  if (!('code' in payload) || payload.code !== code) {
+  if (!isMatch) {
     return res.status(400).json({
       success: false,
       message: '驗證碼錯誤'
