@@ -275,6 +275,7 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
 
   // 更新最後嘗試時間
   existingUser.lastVerificationAttempt = now;
+  await existingUser.save(); // 立即保存更新的冷卻時間
   
   try {
     // 生成重置 token
@@ -285,7 +286,7 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
     await sendPasswordResetEmail(existingUser.email, code);
 
     res.json({
-      success: false,
+      success: true,
       message: '密碼重置郵件已發送'
     });
   } catch (error) {
