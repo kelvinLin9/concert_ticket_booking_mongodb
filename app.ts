@@ -103,21 +103,29 @@ app.use((err: Error & {
     res.status(statusCode).json(errorResponse);
   } else {
     // 當為非操作型錯誤時（如系統異常、程序錯誤）
-    if (isDevelopment) {
-      res.status(statusCode).json({
-        success: false,
-        message: err.message || '系統發生錯誤',
-        errorCode: 'SYSTEM_ERROR',
-        stack: err.stack,
-        error: err
-      });
-    } else {
-      res.status(statusCode).json({
-        success: false,
-        message: '系統發生錯誤',
-        errorCode: 'SYSTEM_ERROR'
-      });
-    }
+    // if (isDevelopment) {
+    //   res.status(statusCode).json({
+    //     success: false,
+    //     message: err.message || '系統發生錯誤',
+    //     errorCode: 'SYSTEM_ERROR',
+    //     stack: err.stack,
+    //     error: err
+    //   });
+    // } else {
+    //   res.status(statusCode).json({
+    //     success: false,
+    //     message: '系統發生錯誤',
+    //     errorCode: 'SYSTEM_ERROR'
+    //   });
+    // }
+    // 先一律這樣返回
+    res.status(statusCode).json({
+      success: false,
+      message: err.message || '系統發生錯誤',
+      errorCode: 'SYSTEM_ERROR',
+      stack: err.stack,
+      error: err
+    });
   }
 });
 
