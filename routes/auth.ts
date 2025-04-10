@@ -2,7 +2,6 @@ import { Router } from 'express';
 import {
   login,
   signup,
-  forget,
   check,
 } from '../controller/user';
 import { googleLogin } from '../controller/auth';
@@ -174,9 +173,6 @@ router.post('/request-password-reset', handleErrorAsync(requestPasswordReset));
 
 // 重置密碼
 router.post('/reset-password', handleErrorAsync(resetPassword));
-
-// 忘記密碼（舊版，保留向後兼容）
-router.post('/forgot', forget);
 
 // 檢查是否登入
 router.get('/check', isAuth, check);
