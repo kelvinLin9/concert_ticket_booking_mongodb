@@ -242,16 +242,23 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
 
   try {
     // 1. 原子性地檢查和更新冷卻時間
+    const now = new Date();
+    const cooldownTime = 600000; // 10分鐘，單位：毫秒
+
     const user = await User.findOneAndUpdate(
       { 
         email,
         $or: [
           { lastVerificationAttempt: { $exists: false } },
-          { lastVerificationAttempt: { $lt: new Date(Date.now() - 600000) } }
+          { 
+            lastVerificationAttempt: { 
+              $lt: new Date(now.getTime() - cooldownTime)
+            }
+          }
         ]
       },
       { 
-        $set: { lastVerificationAttempt: new Date() }
+        $set: { lastVerificationAttempt: now }
       },
       { new: true }
     );
