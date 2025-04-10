@@ -80,7 +80,9 @@ app.use((err: Error & {
   // 測試環境中返回完整錯誤信息
   const isDevelopment = process.env.NODE_ENV === 'development';
   
+
   // 先一律這樣返回
+
   res.status(statusCode).json({
     success: false,
     message: err.message || '系統發生錯誤',

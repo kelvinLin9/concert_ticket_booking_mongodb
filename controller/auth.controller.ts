@@ -209,7 +209,7 @@ export const resendVerification = handleErrorAsync(async (req: Request, res: Res
     const remainingSeconds = Math.ceil(
       (600000 - (Date.now() - user.lastVerificationAttempt.getTime())) / 1000
     );
-    throw new AppError('請稍後再試', 400, 'COOLDOWN_PERIOD');
+    throw new AppError(`請等 ${remainingSeconds} 秒後再試`, 400, 'COOLDOWN_PERIOD');
   }
 
   const { code } = await user.createVerificationToken();
@@ -260,7 +260,7 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
     );
     console.log('剩餘冷卻時間(秒):', remainingSeconds);
     
-    const error = new AppError('請稍後再試', 400, 'COOLDOWN_PERIOD');
+    const error = new AppError(`請等 ${remainingSeconds} 秒後再試`, 400, 'COOLDOWN_PERIOD');
     // @ts-ignore - 添加剩餘時間屬性
     error.remainingSeconds = remainingSeconds;
     throw error;
