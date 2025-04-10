@@ -5,6 +5,7 @@ export class AppError extends Error {
   status: number;
   code: string;
   isOperational: boolean;
+  name: string = 'AppError'; // 顯式類型標記
 
   constructor(message: string, statusCode = 400, errorCode = 'ERROR') {
     super(message);

@@ -78,61 +78,82 @@ export const register = handleErrorAsync(async (req: Request, res: Response) => 
 
 // 用戶登入
 export const login = handleErrorAsync(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  // 檢查必要欄位
-  if (!email || !password) {
-    throw new AppError('請提供電子郵件和密碼', 400, 'MISSING_FIELDS');
-  }
-
-  // 查找用戶，包含密碼欄位
-  const user = await User.findOne({ email }).select('+password');
+  console.log('登入請求內容:', req.body);
   
-  // 檢查用戶是否存在
-  if (!user) {
-    throw new AppError('帳號或密碼錯誤', 401, 'INVALID_CREDENTIALS');
-  }
-
-  // 檢查是否有密碼（排除 OAuth 用戶）
-  if (!user.password) {
-    throw new AppError('此帳號使用第三方登入，請使用對應的登入方式', 401, 'OAUTH_USER');
-  }
-
-  // 驗證密碼
-  let isMatch;
   try {
-    isMatch = await bcrypt.compare(password, user.password);
+    const { email, password } = req.body;
+
+    // 檢查必要欄位
+    if (!email || !password) {
+      console.log('缺少必要欄位 - 拋出 AppError');
+      const appError = new AppError('請提供電子郵件和密碼', 400, 'MISSING_FIELDS');
+      console.log('AppError 內容:', appError);
+      throw appError;
+    }
+
+    // 查找用戶，包含密碼欄位
+    const user = await User.findOne({ email }).select('+password');
+    
+    // 檢查用戶是否存在
+    if (!user) {
+      console.log('用戶不存在 - 拋出 AppError');
+      throw new AppError('帳號或密碼錯誤', 401, 'INVALID_CREDENTIALS');
+    }
+
+    // 檢查是否有密碼（排除 OAuth 用戶）
+    if (!user.password) {
+      console.log('OAuth用戶 - 拋出 AppError');
+      throw new AppError('此帳號使用第三方登入，請使用對應的登入方式', 401, 'OAUTH_USER');
+    }
+
+    // 驗證密碼
+    let isMatch;
+    try {
+      isMatch = await bcrypt.compare(password, user.password);
+    } catch (error) {
+      console.log('密碼比對錯誤 - 拋出 AppError');
+      throw new AppError('帳號或密碼錯誤', 401, 'INVALID_CREDENTIALS');
+    }
+    
+    if (!isMatch) {
+      console.log('密碼不匹配 - 拋出 AppError');
+      throw new AppError('帳號或密碼錯誤', 401, 'INVALID_CREDENTIALS');
+    }
+
+    // 檢查郵箱是否已驗證
+    if (!user.isEmailVerified) {
+      console.log('郵箱未驗證 - 拋出 AppError');
+      throw new AppError('請先驗證您的電子郵件', 403, 'EMAIL_NOT_VERIFIED');
+    }
+
+    // 生成 token
+    const token = generateToken({
+      userId: user._id.toString(),
+      role: user.role
+    });
+
+    res.json({
+      success: true,
+      user: {
+        _id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isEmailVerified: user.isEmailVerified
+      },
+      token
+    });
   } catch (error) {
-    throw new AppError('帳號或密碼錯誤', 401, 'INVALID_CREDENTIALS');
+    console.log('登入捕獲到錯誤:', error);
+    // 如果是我們的 AppError 實例，直接拋出
+    if (error && ((error as any).name === 'AppError' || (error as any).isOperational)) {
+      throw error;
+    } else {
+      // 其他未知錯誤，轉換為系統錯誤
+      throw new AppError('登入過程發生錯誤', 500, 'LOGIN_ERROR');
+    }
   }
-  
-  if (!isMatch) {
-    throw new AppError('帳號或密碼錯誤', 401, 'INVALID_CREDENTIALS');
-  }
-
-  // 檢查郵箱是否已驗證
-  if (!user.isEmailVerified) {
-    throw new AppError('請先驗證您的電子郵件', 403, 'EMAIL_NOT_VERIFIED');
-  }
-
-  // 生成 token
-  const token = generateToken({
-    userId: user._id.toString(),
-    role: user.role
-  });
-
-  res.json({
-    success: true,
-    user: {
-      _id: user._id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified
-    },
-    token
-  });
 });
 
 // 驗證電子郵件
