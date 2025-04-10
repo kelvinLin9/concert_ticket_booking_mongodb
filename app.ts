@@ -84,7 +84,7 @@ app.use((err: Error & {
   // 先一律這樣返回
 
   res.status(statusCode).json({
-    success: false,
+    status: 'fail',
     message: err.message || '系統發生錯誤',
     // errorCode: 'SYSTEM_ERROR',
     // stack: err.stack,
@@ -95,7 +95,7 @@ app.use((err: Error & {
   // if (isAppError) {
   //   // 構建錯誤響應對象
   //   const errorResponse: any = {
-  //     success: false,
+  //     status: 'fail',
   //     message: err.message,
   //     errorCode: err.code || 'ERROR'
   //   };
@@ -117,7 +117,7 @@ app.use((err: Error & {
   //   // 當為非操作型錯誤時（如系統異常、程序錯誤）
   //   // if (isDevelopment) {
   //   //   res.status(statusCode).json({
-  //   //     success: false,
+  //   //     status: 'fail',
   //   //     message: err.message || '系統發生錯誤',
   //   //     errorCode: 'SYSTEM_ERROR',
   //   //     stack: err.stack,
@@ -125,14 +125,14 @@ app.use((err: Error & {
   //   //   });
   //   // } else {
   //   //   res.status(statusCode).json({
-  //   //     success: false,
+  //   //     status: 'fail',
   //   //     message: '系統發生錯誤',
   //   //     errorCode: 'SYSTEM_ERROR'
   //   //   });
   //   // }
   //   // 先一律這樣返回
   //   // res.status(statusCode).json({
-  //   //   success: false,
+  //   //   status: 'fail',
   //   //   message: err.message || '系統發生錯誤',
   //   //   // errorCode: 'SYSTEM_ERROR',
   //   //   // stack: err.stack,
@@ -144,7 +144,7 @@ app.use((err: Error & {
 // 404 處理中間件
 app.use((req, res) => {
   res.status(404).json({
-    success: false,
+    status: 'fail',
     message: '找不到該資源'
   });
 });

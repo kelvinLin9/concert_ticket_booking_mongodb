@@ -36,7 +36,7 @@ const googleLogin = handleErrorAsync(async (req: Request, res: Response, next: N
   // 檢查必要的用戶數據
   if (!googleReq.user || !googleReq.user.user || !googleReq.user.user._id) {
     return res.status(400).json({
-      success: false,
+      status: 'fail',
       error: { message: 'Invalid user data' }
     });
   }
@@ -73,7 +73,7 @@ const googleLogin = handleErrorAsync(async (req: Request, res: Response, next: N
   // 如果是 POST 請求 (直接從前端發來的)
   if (req.method === 'POST') {
     return res.json({
-      success: true,
+      status: 'success',
       token: token
     });
   }

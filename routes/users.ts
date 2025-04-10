@@ -25,13 +25,13 @@ router.get('/profile', isAuth, handleErrorAsync(async (req: Request, res: Respon
 
   if (!user) {
     return res.status(404).json({
-      success: false,
+      status: 'fail',
       message: '找不到用戶資料'
     });
   }
 
   res.json({
-    success: true,
+    status: 'success',
     user
   });
 }));

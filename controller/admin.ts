@@ -79,7 +79,7 @@ const getUsers = handleErrorAsync(async (req: Request, res: Response, next: Next
   const totalPages = Math.ceil(total / limit);
 
   res.json({
-    success: true,
+    status: 'success',
     data: {
       users,
       pagination: {
@@ -123,7 +123,7 @@ const updateUser = handleErrorAsync(async (req: Request, res: Response, next: Ne
   }
 
   res.json({
-    success: true,
+    status: 'success',
     data: updatedUser
   });
 });
@@ -143,7 +143,7 @@ const deleteUser = handleErrorAsync(async (req: Request, res: Response, next: Ne
   }
 
   res.json({
-    success: true,
+    status: 'success',
     message: '用戶已刪除'
   });
 });

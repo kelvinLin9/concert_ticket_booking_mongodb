@@ -60,7 +60,7 @@ export const register = handleErrorAsync(async (req: Request, res: Response) => 
   });
 
   res.status(201).json({
-    success: true,
+    status: 'success',
     message: '註冊成功，請查收驗證碼郵件',
     user: {
       _id: newUser._id,
@@ -133,7 +133,7 @@ export const login = handleErrorAsync(async (req: Request, res: Response) => {
     });
 
     res.json({
-      success: true,
+      status: 'success',
       user: {
         _id: user._id,
         email: user.email,
@@ -185,7 +185,7 @@ export const verifyEmail = handleErrorAsync(async (req: Request, res: Response) 
   await user.save();
 
   res.json({
-    success: true,
+    status: 'success',
     message: '電子郵件驗證成功'
   });
 });
@@ -224,7 +224,7 @@ export const resendVerification = handleErrorAsync(async (req: Request, res: Res
   await sendVerificationEmail(user.email, code);
 
   res.json({
-    success: true,
+    status: 'success',
     message: '驗證碼已重新發送'
   });
 });
@@ -280,7 +280,7 @@ export const requestPasswordReset = handleErrorAsync(async (req: Request, res: R
     await sendPasswordResetEmail(existingUser.email, code);
 
     res.json({
-      success: true,
+      status: 'success',
       message: '密碼重置郵件已發送'
     });
   } catch (error) {
@@ -329,7 +329,7 @@ export const resetPassword = handleErrorAsync(async (req: Request, res: Response
   await user.save();
 
   res.json({
-    success: true,
+    status: 'success',
     message: '密碼重置成功'
   });
 }); 

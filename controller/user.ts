@@ -29,15 +29,15 @@ const check = async (req: Request, res: Response) => {
     }
 
     res.send({
-      success: true,
+      status: 'success',
       role: payload.role,
       token
     });
   } catch (error) {
     if (error instanceof Error) {
-      res.status(401).send({ success: false, message: error.message });
+      res.status(401).send({ status: 'fail', message: error.message });
     } else {
-      res.status(401).send({ success: false, message: '未知錯誤' });
+      res.status(401).send({ status: 'fail', message: '未知錯誤' });
     }
   }
 };
@@ -52,13 +52,13 @@ const getUser = async (req: Request, res: Response, next: NextFunction) => {
 
     if (!user) {
       return res.status(404).send({
-        success: false,
+        status: 'fail',
         message: '用戶未找到'
       });
     }
 
     res.send({
-      success: true,
+      status: 'success',
       result: user
     });
   } catch (error) {
@@ -154,7 +154,7 @@ const updateInfo = handleErrorAsync(async (req: Request, res: Response, next: Ne
   }
 
   res.json({
-    success: true,
+    status: 'success',
     data: updatedUser
   });
 });
@@ -184,7 +184,7 @@ const getUsers = async (req: Request, res: Response, next: NextFunction) => {
     const totalPages = Math.ceil(totalItems / limit);
 
     res.send({
-      success: true,
+      status: 'success',
       page,
       limit,
       totalPages,
@@ -208,11 +208,11 @@ const updateRole = handleErrorAsync(async (req: Request, res: Response, next: Ne
 
   const newUserDetails = await UsersModel.findByIdAndUpdate(customReq.user.userId, { role: newRole }, { new: true }) as IUser;
   if (!newUserDetails) {
-    return res.status(404).json({ success: false, message: "User not found" });
+    return res.status(404).json({ status: 'fail', message: "User not found" });
   }
   const newToken = generateToken({ userId: newUserDetails._id.toString(), role: newUserDetails.role });
 
-  res.json({ success: true, token: newToken });
+  res.json({ status: 'success', token: newToken });
 });
 const adminUpdateUserInfo = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.body._id;
@@ -263,7 +263,7 @@ const adminUpdateUserInfo = handleErrorAsync(async (req: Request, res: Response,
   }
 
   res.send({
-    success: true,
+    status: 'success',
     data: updatedUser
   });
 });
@@ -285,7 +285,7 @@ const adminDeleteUser = handleErrorAsync(async (req: Request, res: Response, nex
   }
 
   res.send({
-    success: true,
+    status: 'success',
     data: deletedUser
   });
 });

@@ -197,7 +197,7 @@ router.post('/googleClient/callback', (req, res, next) => {
   const { code } = req.body;
   if (!code) {
     res.status(400).json({
-      success: false,
+      status: 'fail',
       error: { message: 'Missing auth code' }
     });
     return;
@@ -214,7 +214,7 @@ router.post('/test-email', handleErrorAsync(async (req: Request, res: Response) 
 
   if (!email) {
     return res.status(400).json({
-      success: false,
+      status: 'fail',
       message: '請提供電子郵件地址'
     });
   }
@@ -229,14 +229,14 @@ router.post('/test-email', handleErrorAsync(async (req: Request, res: Response) 
     }
 
     res.json({
-      success: true,
+      status: 'success',
       message: '測試郵件發送成功',
       code // 在測試環境中返回驗證碼
     });
   } catch (error) {
     console.error('測試郵件發送失敗:', error);
     res.status(500).json({
-      success: false,
+      status: 'fail',
       message: '郵件發送失敗',
       error: error instanceof Error ? error.message : '未知錯誤'
     });
