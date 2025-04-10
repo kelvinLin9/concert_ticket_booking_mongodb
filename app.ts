@@ -122,7 +122,7 @@ app.use((err: Error & {
     res.status(statusCode).json({
       success: false,
       message: err.message || '系統發生錯誤',
-      errorCode: 'SYSTEM_ERROR',
+      // errorCode: 'SYSTEM_ERROR',
       // stack: err.stack,
       error: err
     });
