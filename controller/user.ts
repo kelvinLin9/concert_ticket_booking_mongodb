@@ -13,105 +13,6 @@ interface CustomRequest extends Request {
   };
 }
 
-const signup = handleErrorAsync(async (req: Request, res: Response, next: NextFunction) => {
-  const { email, password, confirmPassword, role = 'user' } = req.body;
-
-  if (password !== confirmPassword) {
-    throw createHttpError(400, '兩次輸入的密碼不匹配');
-  }
-
-  const checkEmail = await UsersModel.findOne({ email });
-  if (checkEmail) {
-    throw createHttpError(400, '此 Email 已註冊');
-  }
-
-  const user = await UsersModel.create({
-    email,
-    password,
-    role,
-    isEmailVerified: false,
-    oauthProviders: []
-  }) as IUser;
-
-  // 生成驗證碼和 token
-  const { code } = await user.createVerificationToken();
-
-  res.send({
-    success: true,
-    message: '註冊成功，請查收驗證碼郵件',
-    user: {
-      _id: user._id,
-      email: user.email,
-      role: user.role,
-      isEmailVerified: user.isEmailVerified
-    },
-    token: generateToken({ userId: user._id.toString(), role: user.role })
-  });
-});
-const login = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email, password } = req.body;
-    const user = await UsersModel.findOne({ email }).select('+password') as IUser;
-    if (!user || !user.password) {
-      throw createHttpError(404, '此使用者不存在');
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      throw createHttpError(400, '密碼錯誤');
-    }
-
-    res.send({
-      success: true,
-      user: {
-        _id: user._id,
-        email: user.email,
-        role: user.role,
-        isEmailVerified: user.isEmailVerified
-      },
-      token: generateToken({ userId: user._id.toString(), role: user.role })
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-const forget = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { email, code, newPassword } = req.body;
-    const user = await UsersModel.findOne({ email }).select('+passwordResetToken +passwordResetExpires');
-    if (!user) {
-      throw createHttpError(404, '此使用者不存在');
-    }
-
-    if (!user.passwordResetToken || !user.passwordResetExpires) {
-      throw createHttpError(400, '無效的重置密碼請求');
-    }
-
-    if (user.passwordResetExpires < new Date()) {
-      throw createHttpError(400, '重置密碼連結已過期');
-    }
-
-    const payload = verifyToken(user.passwordResetToken);
-    if (!('code' in payload)) {
-      throw createHttpError(400, '無效的重置密碼請求');
-    }
-    if (payload.code !== code) {
-      throw createHttpError(400, '驗證碼錯誤');
-    }
-
-    user.password = newPassword;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save();
-
-    res.send({ 
-      success: true,
-      message: '密碼重置成功'
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 const check = async (req: Request, res: Response) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
@@ -391,9 +292,6 @@ const adminDeleteUser = handleErrorAsync(async (req: Request, res: Response, nex
 
 
 export {
-  signup,
-  login,
-  forget,
   check,
   getUser,
   getUsers,
