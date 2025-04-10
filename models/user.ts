@@ -151,30 +151,28 @@ const userSchema = new Schema<IUser>({
       message: '性別格式不正確'
     }
   },
-  preferredRegions: [{
-    type: String,
-    enum: ['north', 'south', 'east', 'central', 'offshore', 'overseas'],  // 北部、南部、東部、中部、離島、海外
+  preferredRegions: {
+    type: [String],
     validate: {
       validator: function(value: string[]) {
-        return !value || value.every(region => 
-          ['north', 'south', 'east', 'central', 'offshore', 'overseas'].includes(region)
-        );
+        const validRegions = ['north', 'south', 'east', 'central', 'offshore', 'overseas'];
+        return Array.isArray(value) && 
+               (!value.length || value.every(region => validRegions.includes(region)));
       },
       message: '偏好活動區域選項不正確'
     }
-  }],
-  preferredEventTypes: [{
-    type: String,
-    enum: ['pop', 'rock', 'electronic', 'hip-hop', 'jazz-blues', 'classical', 'other'],  // 流行音樂、搖滾音樂、電子音樂、嘻哈/饒舌、爵士/藍調、古典/交響樂、其他
+  },
+  preferredEventTypes: {
+    type: [String],
     validate: {
       validator: function(value: string[]) {
-        return !value || value.every(type => 
-          ['pop', 'rock', 'electronic', 'hip-hop', 'jazz-blues', 'classical', 'other'].includes(type)
-        );
+        const validTypes = ['pop', 'rock', 'electronic', 'hip-hop', 'jazz-blues', 'classical', 'other'];
+        return Array.isArray(value) && 
+               (!value.length || value.every(type => validTypes.includes(type)));
       },
       message: '偏好活動類型選項不正確'
     }
-  }],
+  },
   country: {
     type: String,
     trim: true
