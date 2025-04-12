@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      # 使用外部 MongoDB 服務，所以這裡不需要 DB_CONNECTION_STRING
+      # 如果你想在 docker-compose 中使用環境變數，可以這樣引用
+      # - DB_CONNECTION_STRING=${DB_CONNECTION_STRING}
+    volumes:
+      # 掛載源代碼（開發環境使用）
+      - ./:/app
+      # 排除 node_modules，使用容器內的版本
+      - /app/node_modules
+      # 排除 dist 目錄，避免覆蓋容器內編譯的檔案
+      - /app/dist
+    command: sh -c "npm install --ignore-scripts && ./node_modules/.bin/tsc --watch & nodemon --watch dist dist/bin/server.js"
+    # 如果你想連接到本地 MongoDB 容器，取消以下注釋
+    # depends_on:
+    #   - mongodb
+  
+  # 如果你想在本地運行 MongoDB，取消以下注釋
+  # mongodb:
+  #   image: mongo:6
+  #   ports:
+  #     - "27017:27017"
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #   environment:
+  #     - MONGO_INITDB_ROOT_USERNAME=admin
+  #     - MONGO_INITDB_ROOT_PASSWORD=password
+
+# 如果使用本地 MongoDB，取消以下注釋
+# volumes:
+#   mongodb_data: 

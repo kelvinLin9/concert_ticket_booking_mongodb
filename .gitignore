@@ -12,6 +12,7 @@ build/
 .env
 .env.local
 .env.*.local
+.env.docker
 
 # IDE and editor files
 .idea/
@@ -34,4 +35,8 @@ coverage/
 .eslintcache
 
 # Optional REPL history
-.node_repl_history 
+.node_repl_history
+
+# Docker
+.docker
+docker-compose.override.yml 
